@@ -5786,11 +5786,11 @@ LGraphNode.prototype.executeAction = function(action)
             "DOMMouseScroll",
             this._mousewheel_callback
         );
-        this.canvas.removeEventListener("keydown", this._key_callback);
-        document.removeEventListener("keyup", this._key_callback);
-        this.canvas.removeEventListener("contextmenu", this._doNothing);
-        this.canvas.removeEventListener("drop", this._ondrop_callback);
-        this.canvas.removeEventListener("dragenter", this._doReturnTrue);
+        this.canvas.removeEventListener("keydown", this._key_callback, true);
+        document.removeEventListener("keyup", this._key_callback, true);
+        this.canvas.removeEventListener("contextmenu", this._doNothing, true);
+        this.canvas.removeEventListener("drop", this._ondrop_callback, false);
+        this.canvas.removeEventListener("dragenter", this._doReturnTrue, false);
 
         //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
         /*this.canvas.removeEventListener("touchstart", this._touch_callback );
@@ -7180,6 +7180,15 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             }
 
+            if ((e.keyCode === 88) && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+                //cut
+                if (this.selected_nodes) {
+                    this.copyToClipboard();
+                    this.deleteSelectedNodes();
+                    block_default = true;
+                }
+            }
+
             if ((e.keyCode === 86) && (e.metaKey || e.ctrlKey)) {
                 //paste
                 this.pasteFromClipboard(e.shiftKey);
@@ -7238,12 +7247,15 @@ LGraphNode.prototype.executeAction = function(action)
         };
         var index = 0;
         var selected_nodes_array = [];
+
+        var map = {};
+
         for (var i in this.selected_nodes) {
             var node = this.selected_nodes[i];
             if (node.clonable === false)
                 continue;
-            node._relative_id = index;
             selected_nodes_array.push(node);
+            map[node.id] = index;
             index += 1;
         }
 
@@ -7275,9 +7287,9 @@ LGraphNode.prototype.executeAction = function(action)
                         continue;
                     }
                     clipboard_info.links.push([
-                        target_node._relative_id,
+                        map[target_node.id],
                         link_info.origin_slot, //j,
-                        node._relative_id,
+                        map[node.id],
                         link_info.target_slot,
                         target_node.id
                     ]);
@@ -7343,7 +7355,7 @@ LGraphNode.prototype.executeAction = function(action)
         //create links
         for (var i = 0; i < clipboard_info.links.length; ++i) {
             var link_info = clipboard_info.links[i];
-            var origin_node;
+            var origin_node = null;
             var origin_node_relative_id = link_info[0];
             if (origin_node_relative_id != null) {
                 origin_node = nodes[origin_node_relative_id];
@@ -7353,6 +7365,7 @@ LGraphNode.prototype.executeAction = function(action)
                     origin_node = this.graph.getNodeById(origin_node_id);
                 }
             }
+
             var target_node = nodes[link_info[2]];
 			if( origin_node && target_node )
 	            origin_node.connect(link_info[1], target_node, link_info[3]);
