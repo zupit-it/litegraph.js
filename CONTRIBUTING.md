@@ -7,3 +7,24 @@ There are some simple rules that everyone should follow:
 Those files will be updated by owner.
 
 
+# Development
+
+## Prerequisites
+- [Node.js](https://nodejs.org/en/) Tested with Node v18.16.0
+- [Python](https://www.python.org/downloads/) Tested with Python 3.11.6
+
+## Setup
+1. Clone the repository
+2. Install the dependencies
+```bash
+npm install
+```
+
+## Build
+Run the following command to build the project
+```bash
+cd utils
+./build.sh
+```
+
+You should find all the build files in the `build` folder.
