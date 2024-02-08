@@ -5784,11 +5784,11 @@ LGraphNode.prototype.executeAction = function(action)
             "DOMMouseScroll",
             this._mousewheel_callback
         );
-        this.canvas.removeEventListener("keydown", this._key_callback);
-        document.removeEventListener("keyup", this._key_callback);
-        this.canvas.removeEventListener("contextmenu", this._doNothing);
-        this.canvas.removeEventListener("drop", this._ondrop_callback);
-        this.canvas.removeEventListener("dragenter", this._doReturnTrue);
+        this.canvas.removeEventListener("keydown", this._key_callback, true);
+        document.removeEventListener("keyup", this._key_callback, true);
+        this.canvas.removeEventListener("contextmenu", this._doNothing, true);
+        this.canvas.removeEventListener("drop", this._ondrop_callback, false);
+        this.canvas.removeEventListener("dragenter", this._doReturnTrue, false);
 
         //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
         /*this.canvas.removeEventListener("touchstart", this._touch_callback );
