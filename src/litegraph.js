@@ -7178,6 +7178,15 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             }
 
+            if ((e.keyCode === 88) && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+                //cut
+                if (this.selected_nodes) {
+                    this.copyToClipboard();
+                    this.deleteSelectedNodes();
+                    block_default = true;
+                }
+            }
+
             if ((e.keyCode === 86) && (e.metaKey || e.ctrlKey)) {
                 //paste
                 this.pasteFromClipboard(e.shiftKey);
