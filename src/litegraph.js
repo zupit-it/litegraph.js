@@ -3810,7 +3810,7 @@
      * @param {Object} options the object that contains special properties of this widget 
      * @return {Object} the created widget object
      */
-    LGraphNode.prototype.addWidget = function( type, name, value, callback, options )
+    LGraphNode.prototype.addWidget = function( type, name, value, callback, options, forbiddenChars )
 	{
         if (!this.widgets) {
             this.widgets = [];
@@ -3844,7 +3844,8 @@
             name: name,
             value: value,
             callback: callback,
-            options: options || {}
+            options: options || {},
+            forbiddenChars: forbiddenChars || []
         };
 
         if (w.options.y !== undefined) {
@@ -10264,7 +10265,7 @@ LGraphNode.prototype.executeAction = function(action)
 						this.prompt("Value",w.value,function(v) {
 								inner_value_change(this, v);
 							}.bind(w),
-							event,w.options ? w.options.multiline : false );
+							event,w.options ? w.options.multiline : false, w.forbiddenChars );
 					}
 					break;
 				default:
@@ -11397,10 +11398,11 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     // refactor: there are different dialogs, some uses createDialog some dont
-    LGraphCanvas.prototype.prompt = function(title, value, callback, event, multiline) {
+    LGraphCanvas.prototype.prompt = function(title, value, callback, event, multiline, forbiddenChars) {
         var that = this;
         var input_html = "";
         title = title || "";
+        forbiddenChars = forbiddenChars || [];
 
         var dialog = document.createElement("div");
         dialog.is_modified = false;
@@ -11478,6 +11480,9 @@ LGraphNode.prototype.executeAction = function(action)
                     callback(this.value);
                 }
                 dialog.close();
+            } else if(forbiddenChars.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
             } else {
                 return;
             }
