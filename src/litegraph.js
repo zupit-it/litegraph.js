@@ -1645,6 +1645,50 @@
         return this._nodes_by_id[id];
     };
 
+    LGraph.prototype.getAllNodes = function() {
+        return this._nodes;
+    };
+
+    LGraph.prototype.getAllNodesSortedById = function() {
+        return this._nodes.sort((a,b) => a.id - b.id);
+    };
+
+    LGraph.prototype.getNodeByGraphId = function(graphId) {
+        return this._nodes.find(node => node.graphId === graphId);
+    };
+
+    LGraph.prototype.getAllEdgesSorted = function() {
+        if(graph == null || graph.links == null) {
+            return [];
+        }
+        return Object.values(graph.links).sort(
+            (a, b) => {
+                if(a == null && b == null) {
+                    return 0;
+                }
+                if(a == null) {
+                    return -1;
+                }
+                if(b == null) {
+                    return 1;
+                }
+                if(a.origin_id !== b.origin_id) {
+                    return a.origin_id < b.origin_id ? -1 : 1;
+                }
+                if(a.target_id !== b.target_id) {
+                    return a.target_id < b.target_id ? -1 : 1;
+                }
+                if(a.origin_slot !== b.origin_slot) {
+                    return a.origin_slot < b.origin_slot ? -1 : 1;
+                }
+                if(a.target_slot !== b.target_slot) {
+                    return a.target_slot < b.target_slot ? -1 : 1;
+                }
+                return 0;
+            }
+        );
+    };
+
     /**
      * Returns a list of nodes that matches a class
      * @method findNodesByClass
@@ -2370,6 +2414,32 @@
 
     LGraph.prototype.onNodeTrace = function(node, msg, color) {
         //TODO
+    };
+
+    LGraph.prototype.toJson = function() {
+        return {
+            links: this.getAllEdgesSorted().map(link => {
+                const src = graph.getNodeById(link.origin_id);
+                const dst = graph.getNodeById(link.target_id);
+                return {
+                    source: `${src.graphId}`,
+                    target: `${dst.graphId}`,
+                    parameters: {
+                        source_slot: link.origin_slot,
+                        target_slot: link.target_slot
+                    }
+                };
+            }),
+            nodes: this.getAllNodesSortedById().map(node => {
+                return {
+                    id: `${node.graphId}`,
+                    parameters: {
+                        ...node.properties,
+                        pos: [...node.pos]
+                    }
+                };
+            })
+        };
     };
 
     //this is the class in charge of storing link information
