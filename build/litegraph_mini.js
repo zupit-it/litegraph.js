@@ -13259,6 +13259,7 @@ LGraphNode.prototype.executeAction = function(action)
 		
 		graph.afterChange();
         node.setDirtyCanvas(true, true);
+        graph.customCanvas.saveState();
     };
 
     LGraphCanvas.onMenuNodeToSubgraph = function(value, options, e, menu, node) {
