@@ -6797,6 +6797,7 @@ LGraphNode.prototype.executeAction = function(action)
      * @method processMouseUp
      **/
     LGraphCanvas.prototype.processMouseUp = function(e) {
+
         var saveState = false;
 		var is_primary = ( e.isPrimary === undefined || e.isPrimary );
 
