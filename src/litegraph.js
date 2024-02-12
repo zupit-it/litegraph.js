@@ -14158,6 +14158,7 @@ LGraphNode.prototype.executeAction = function(action)
         
         // TODO implement : LiteGraph.contextMenuClosed(); :: keep track of opened / closed / current ContextMenu
         // on key press, allow filtering/selecting the context menu elements
+        LGraphCanvas.active_canvas.canvas.focus();
     };
 
     //this code is used to trigger events easily (used in the context menu mouseleave
