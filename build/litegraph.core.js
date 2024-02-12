@@ -1660,10 +1660,10 @@
     };
 
     LGraph.prototype.getAllEdgesSorted = function() {
-        if(graph == null || graph.links == null) {
+        if(this.links == null) {
             return [];
         }
-        return Object.values(graph.links).sort(
+        return Object.values(this.links).sort(
             (a, b) => {
                 if(a == null && b == null) {
                     return 0;
@@ -2421,8 +2421,8 @@
     LGraph.prototype.toJson = function() {
         return {
             links: this.getAllEdgesSorted().map(link => {
-                const src = graph.getNodeById(link.origin_id);
-                const dst = graph.getNodeById(link.target_id);
+                const src = this.getNodeById(link.origin_id);
+                const dst = this.getNodeById(link.target_id);
                 return {
                     source: `${src.graphId}`,
                     target: `${dst.graphId}`,
@@ -5502,6 +5502,8 @@ LGraphNode.prototype.executeAction = function(action)
 
 		this.viewport = options.viewport || null; //to constraint render area to a portion of the canvas
 
+        this.state_max_size = 100; //avoid infinite undo
+
         //link canvas and graph
         if (graph) {
             graph.attachCanvas(this);
@@ -5572,6 +5574,51 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.onClear) {
             this.onClear();
         }
+    };
+
+    LGraphCanvas.prototype.resetState = function() {
+        this.state = [graphToJson(this.graph)]
+        this.stateIndex = this.state.length - 1;
+    };
+
+    LGraphCanvas.prototype.saveState = function() {
+        if (this.state == null) {
+            this.state = [];
+        }
+
+        const newState = graphToJson(this.graph);
+
+        if (this.state.length > 0 && JSON.stringify(newState) === JSON.stringify(this.state[this.stateIndex])) {
+            return;
+        }
+
+        this.state = [...this.state.slice(0, this.stateIndex + 1), newState];
+
+        if (this.state.length > (this.state_max_size + 1)) {
+            this.state = this.state.slice(1);
+        }
+
+        this.stateIndex = this.state.length - 1;
+    };
+
+    LGraphCanvas.prototype.undoAction = function() {
+        if(this.stateIndex == null || this.stateIndex <= 0) {
+            return;
+        }
+
+        this.stateIndex -= 1;
+        this.graph.clear();
+        this.graph.loadJson(this.state[this.stateIndex], this.graph.graphConfiguration);
+    };
+
+    LGraphCanvas.prototype.redoAction = function() {
+        if(this.stateIndex == null || this.stateIndex >= this.state.length - 1) {
+            return;
+        }
+
+        this.stateIndex += 1;
+        this.graph.clear();
+        this.graph.loadJson(this.state[this.stateIndex], this.graph.graphConfiguration);
     };
 
     /**
@@ -6713,6 +6760,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 			//node being dragged
             if (this.node_dragged && !this.live_mode) {
+                this.nodes_moved = true;
 				//console.log("draggin!",this.selected_nodes);
                 for (var i in this.selected_nodes) {
                     var n = this.selected_nodes[i];
@@ -6751,7 +6799,7 @@ LGraphNode.prototype.executeAction = function(action)
      * @method processMouseUp
      **/
     LGraphCanvas.prototype.processMouseUp = function(e) {
-
+        var saveState = false;
 		var is_primary = ( e.isPrimary === undefined || e.isPrimary );
 
     	//early exit for extra pointer
@@ -6883,6 +6931,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 this.dragging_rectangle = null;
             } else if (this.connecting_node) {
+                saveState = true;
                 //dragging a connection
                 this.dirty_canvas = true;
                 this.dirty_bgcanvas = true;
@@ -6979,6 +7028,12 @@ LGraphNode.prototype.executeAction = function(action)
             } else if (this.node_dragged) {
                 //node being dragged?
                 var node = this.node_dragged;
+
+                if(this.nodes_moved) {
+                    saveState = true;
+                    this.nodes_moved = false;
+                }
+
                 if (
                     node &&
                     e.click_time < 300 &&
@@ -7051,6 +7106,10 @@ LGraphNode.prototype.executeAction = function(action)
 		}
 	  
         this.graph.change();
+
+        if (saveState) {
+            this.saveState();
+        }
 
         //console.log("pointerevents: processMouseUp stopPropagation");
         e.stopPropagation();
@@ -7265,6 +7324,18 @@ LGraphNode.prototype.executeAction = function(action)
                 this.pasteFromClipboard(e.shiftKey);
             }
 
+            if ((e.keyCode === 90) && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+                //undo
+                this.undoAction();
+                block_default = true;
+            }
+
+            if ((e.keyCode === 90) && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+                //undo
+                this.redoAction();
+                block_default = true;
+            }
+
             //delete or backspace
             if (e.keyCode == 46 || e.keyCode == 8) {
                 if (
@@ -7447,6 +7518,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.selectNodes(nodes);
 
 		this.graph.afterChange();
+        this.saveState();
     };
 
     /**
@@ -7733,6 +7805,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.highlighted_links = {};
         this.setDirty(true);
 		this.graph.afterChange();
+        this.saveState();
     };
     
     /**
