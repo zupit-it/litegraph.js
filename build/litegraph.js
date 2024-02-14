@@ -6799,7 +6799,7 @@ LGraphNode.prototype.executeAction = function(action)
      * @method processMouseUp
      **/
     LGraphCanvas.prototype.processMouseUp = function(e) {
-        var saveState = false;
+		var saveState = false;
 		var is_primary = ( e.isPrimary === undefined || e.isPrimary );
 
     	//early exit for extra pointer
@@ -10035,14 +10035,16 @@ LGraphNode.prototype.executeAction = function(action)
         var show_text = this.ds.scale > 0.5;
         ctx.save();
         ctx.globalAlpha = this.editor_alpha;
-        var outline_color = LiteGraph.WIDGET_OUTLINE_COLOR;
-        var background_color = LiteGraph.WIDGET_BGCOLOR;
-        var text_color = LiteGraph.WIDGET_TEXT_COLOR;
-		var secondary_text_color = LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
         var margin = 15;
 
         for (var i = 0; i < widgets.length; ++i) {
             var w = widgets[i];
+
+            var outline_color = w?.outline_color ?? LiteGraph.WIDGET_OUTLINE_COLOR;
+            var background_color = w?.background_color ?? LiteGraph.WIDGET_BGCOLOR;
+            var text_color = w?.text_color ?? LiteGraph.WIDGET_TEXT_COLOR;
+            var secondary_text_color = w?.secondary_text_color ?? LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
+
             var y = posY;
             if (w.y) {
                 y = w.y;
