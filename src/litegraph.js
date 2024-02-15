@@ -10242,6 +10242,56 @@ LGraphNode.prototype.executeAction = function(action)
 		ctx.textAlign = "left";
     };
 
+    LGraphCanvas.prototype.openFirstAvailableWidgetWithPrompt = function(node, widgetIndex, event, callback) {
+        if (widgetIndex < 0 || widgetIndex >= node.widgets.length) {
+            return;
+        }
+
+        while (widgetIndex < node.widgets.length) {
+            let nextWidget = node.widgets[widgetIndex];
+            if (nextWidget && ["string", "text"].includes(nextWidget.type)) {
+                this.openStringPrompt(node, widgetIndex, event, callback);
+                return;
+            } else if (nextWidget && nextWidget.type === "number") {
+                this.openNumberPrompt(node, widgetIndex, event, callback);
+                return;
+            }
+            widgetIndex += 1;
+        }
+    };
+
+    LGraphCanvas.prototype.openNumberPrompt = function(node, widgetIndex, event, callback) {
+        const that = this;
+        const widget = node.widgets[widgetIndex];
+        this.prompt(widget.name, widget.value, function(v, moveToNextWidget) {
+                // check if v is a valid equation or a number
+                if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
+                    try {//solve the equation if possible
+                        v = eval(v);
+                    } catch (e) {
+                    }
+                }
+                this.value = Number(v);
+                callback(this, this.value);
+                if (moveToNextWidget) {
+                    that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
+                }
+            }.bind(w),
+            event);
+    };
+
+    LGraphCanvas.prototype.openStringPrompt = function(node, widgetIndex, event, callback) {
+        const that = this;
+        const widget = node.widgets[widgetIndex];
+        this.prompt(widget.name, widget.value, function(v, moveToNextWidget) {
+                callback(this, v);
+                if (moveToNextWidget) {
+                    that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
+                }
+            }.bind(widget),
+            event, widget.options ? widget.options.multiline : false, widget.forbiddenChars);
+    };
+
     /**
      * process an event on widgets
      * @method processNodeWidgets
@@ -10270,8 +10320,8 @@ LGraphNode.prototype.executeAction = function(action)
 			var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
 			var widget_width = w.width || width;
 			//outside
-			if ( w != active_widget && 
-				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) ) 
+			if ( w != active_widget &&
+				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) )
 				continue;
 
 			var old_value = w.value;
@@ -10320,7 +10370,7 @@ LGraphNode.prototype.executeAction = function(action)
 							values = w.options.values(w, node);
 						}
 						var values_list = null;
-						
+
 						if( w.type != "number")
 							values_list = values.constructor === Array ? values : Object.keys(values);
 
@@ -10333,7 +10383,7 @@ LGraphNode.prototype.executeAction = function(action)
 							if ( w.options.max != null && w.value > w.options.max ) {
 								w.value = w.options.max;
 							}
-						} else if (delta) { //clicked in arrow, used for combos 
+						} else if (delta) { //clicked in arrow, used for combos
 							var index = -1;
 							this.last_mouseclick = 0; //avoids dobl click event
 							if(values.constructor === Object)
@@ -10350,7 +10400,7 @@ LGraphNode.prototype.executeAction = function(action)
 								w.value = values[index];
 							else
 								w.value = index;
-						} else { //combo clicked 
+						} else { //combo clicked
 							var text_values = values != values_list ? Object.values(values) : values;
 							var menu = new LiteGraph.ContextMenu(text_values, {
 									scale: Math.max(1, this.ds.scale),
@@ -10373,17 +10423,7 @@ LGraphNode.prototype.executeAction = function(action)
 					{
 						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (event.click_time < 200 && delta == 0) {
-							this.prompt("Value",w.value,function(v) {
-									// check if v is a valid equation or a number
-									  if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
-										try {//solve the equation if possible
-									    		v = eval(v);
-										} catch (e) { }
-									}	
-									this.value = Number(v);
-									inner_value_change(this, this.value);
-								}.bind(w),
-								event);
+							this.openNumberPrompt(node, i, event, (widget, value) => inner_value_change(widget, value));
 						}
 					}
 
@@ -10407,10 +10447,7 @@ LGraphNode.prototype.executeAction = function(action)
 				case "string":
 				case "text":
 					if (event.type == LiteGraph.pointerevents_method+"down") {
-						this.prompt("Value",w.value,function(v) {
-								inner_value_change(this, v);
-							}.bind(w),
-							event,w.options ? w.options.multiline : false, w.forbiddenChars );
+						this.openStringPrompt(node, i, event, (widget, value) => inner_value_change(widget, value));
 					}
 					break;
 				default:
@@ -11620,9 +11657,10 @@ LGraphNode.prototype.executeAction = function(action)
             if (e.keyCode == 27) {
                 //ESC
                 dialog.close();
-            } else if (e.keyCode == 13 && e.target.localName != "textarea") {
+            } else if (e.keyCode == 9 || (e.keyCode == 13 && e.target.localName != "textarea")) {
                 if (callback) {
-                    callback(this.value);
+                    // If TAB or ENTER (but not in a textarea), accept the value and open the next widget
+                    callback(this.value, true);
                 }
                 dialog.close();
             } else if(forbiddenChars.includes(e.key)) {
