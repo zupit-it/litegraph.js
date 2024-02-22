@@ -10244,55 +10244,55 @@ LGraphNode.prototype.executeAction = function(action)
 		ctx.textAlign = "left";
     };
 
-    LGraphCanvas.prototype.openFirstAvailableWidgetWithPrompt = function (node, widgetIndex, event, callback) {
+    LGraphCanvas.prototype.openFirstAvailableWidgetWithPrompt = function(node, widgetIndex, event, callback) {
         if (widgetIndex < 0 || widgetIndex >= node.widgets.length) {
             return;
         }
 
-        while(widgetIndex < node.widgets.length) {
+        while (widgetIndex < node.widgets.length) {
             let nextWidget = node.widgets[widgetIndex];
-            if(nextWidget && ["string", "text"].includes(nextWidget.type)) {
+            if (nextWidget && ["string", "text"].includes(nextWidget.type)) {
                 this.openStringPrompt(node, widgetIndex, event, callback);
                 return;
-            } else if(nextWidget && nextWidget.type === "number") {
+            } else if (nextWidget && nextWidget.type === "number") {
                 this.openNumberPrompt(node, widgetIndex, event, callback);
                 return;
             }
             widgetIndex += 1;
         }
-    }
+    };
 
-    LGraphCanvas.prototype.openNumberPrompt = function (node, widgetIndex, event, callback) {
+    LGraphCanvas.prototype.openNumberPrompt = function(node, widgetIndex, event, callback) {
         const that = this;
         const widget = node.widgets[widgetIndex];
-        this.prompt(widget.name, widget.value, function (v, moveToNextWidget) {
-                    // check if v is a valid equation or a number
-                    if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
-                        try {//solve the equation if possible
-                            v = eval(v);
-                        } catch (e) {
-                        }
+        this.prompt(widget.name, widget.value, function(v, moveToNextWidget) {
+                // check if v is a valid equation or a number
+                if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
+                    try {//solve the equation if possible
+                        v = eval(v);
+                    } catch (e) {
                     }
-                    this.value = Number(v);
-                    callback(this, this.value);
-                    if (moveToNextWidget) {
-                        that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
-                    }
-                }.bind(w),
-                event);
-    }
+                }
+                this.value = Number(v);
+                callback(this, this.value);
+                if (moveToNextWidget) {
+                    that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
+                }
+            }.bind(w),
+            event);
+    };
 
-    LGraphCanvas.prototype.openStringPrompt = function (node, widgetIndex, event, callback) {
+    LGraphCanvas.prototype.openStringPrompt = function(node, widgetIndex, event, callback) {
         const that = this;
         const widget = node.widgets[widgetIndex];
-        this.prompt(widget.name, widget.value, function (v, moveToNextWidget) {
-                    callback(this, v);
-                    if (moveToNextWidget) {
-                        that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
-                    }
-                }.bind(widget),
-                event, widget.options ? widget.options.multiline : false, widget.forbiddenChars);
-    }
+        this.prompt(widget.name, widget.value, function(v, moveToNextWidget) {
+                callback(this, v);
+                if (moveToNextWidget) {
+                    that.openFirstAvailableWidgetWithPrompt(node, widgetIndex + 1, event, callback);
+                }
+            }.bind(widget),
+            event, widget.options ? widget.options.multiline : false, widget.forbiddenChars);
+    };
 
     /**
      * process an event on widgets
@@ -10322,8 +10322,8 @@ LGraphNode.prototype.executeAction = function(action)
 			var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
 			var widget_width = w.width || width;
 			//outside
-			if ( w != active_widget && 
-				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) ) 
+			if ( w != active_widget &&
+				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) )
 				continue;
 
 			var old_value = w.value;
@@ -10372,7 +10372,7 @@ LGraphNode.prototype.executeAction = function(action)
 							values = w.options.values(w, node);
 						}
 						var values_list = null;
-						
+
 						if( w.type != "number")
 							values_list = values.constructor === Array ? values : Object.keys(values);
 
@@ -10385,7 +10385,7 @@ LGraphNode.prototype.executeAction = function(action)
 							if ( w.options.max != null && w.value > w.options.max ) {
 								w.value = w.options.max;
 							}
-						} else if (delta) { //clicked in arrow, used for combos 
+						} else if (delta) { //clicked in arrow, used for combos
 							var index = -1;
 							this.last_mouseclick = 0; //avoids dobl click event
 							if(values.constructor === Object)
@@ -10402,7 +10402,7 @@ LGraphNode.prototype.executeAction = function(action)
 								w.value = values[index];
 							else
 								w.value = index;
-						} else { //combo clicked 
+						} else { //combo clicked
 							var text_values = values != values_list ? Object.values(values) : values;
 							var menu = new LiteGraph.ContextMenu(text_values, {
 									scale: Math.max(1, this.ds.scale),
@@ -11651,7 +11651,7 @@ LGraphNode.prototype.executeAction = function(action)
         var name_element = dialog.querySelector(".name");
         name_element.innerText = title;
         var value_element = dialog.querySelector(".value");
-        value_element.value = value;
+        value_element.value = value ?? "";
 
         var input = value_element;
         input.addEventListener("keydown", function(e) {

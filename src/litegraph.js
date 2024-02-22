@@ -11649,7 +11649,7 @@ LGraphNode.prototype.executeAction = function(action)
         var name_element = dialog.querySelector(".name");
         name_element.innerText = title;
         var value_element = dialog.querySelector(".value");
-        value_element.value = value;
+        value_element.value = value ?? "";
 
         var input = value_element;
         input.addEventListener("keydown", function(e) {
