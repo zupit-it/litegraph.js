@@ -10199,6 +10199,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                     }
                     break;
+                case "label":
                 case "string":
                 case "text":
                     ctx.textAlign = "left";
@@ -10226,7 +10227,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
-                        ctx.fillText(String(w.value).substr(0,30), widget_width - margin * 2, y + H * 0.7); //30 chars max
+                        ctx.fillText(String(w.value ?? '').substr(0,30), widget_width - margin * 2, y + H * 0.7); //30 chars max
 						ctx.restore();
                     }
                     break;
