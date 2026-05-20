@@ -266,13 +266,39 @@
 
     function applyVisualMixin(prototype) {
         prototype.computeSize = function (out) {
-            var size = LiteGraph.LGraphNode.prototype.computeSize.call(this, out);
+            var maxSlots = Math.max(
+                this.inputs ? this.inputs.length : 0,
+                this.outputs ? this.outputs.length : 0,
+                1
+            );
+            var sh = LiteGraph.NODE_SLOT_HEIGHT;
+            var h = maxSlots * sh + 24;
+            if (this.widgets && this.widgets.length) {
+                for (var i = 0; i < this.widgets.length; i++) {
+                    var w = this.widgets[i];
+                    h += (w.computeSize ? w.computeSize(450)[1] : LiteGraph.NODE_WIDGET_HEIGHT) + 4;
+                }
+                h += 8;
+            }
+            var size = out || new Float32Array(2);
             size[0] = 450;
-            // Figma: 24px top + 24px bottom padding around slots.
-            // litegraph formula naturally leaves 0.3*NODE_SLOT_HEIGHT below last slot;
-            // add the remaining gap to reach 24px total bottom padding.
-            size[1] += Math.round(24 - 0.3 * LiteGraph.NODE_SLOT_HEIGHT);
+            size[1] = h;
             return size;
+        };
+        prototype.getConnectionPos = function (is_input, slot_number, out) {
+            out = out || new Float32Array(2);
+            if (this.flags && this.flags.collapsed) {
+                return LiteGraph.LGraphNode.prototype.getConnectionPos.call(
+                    this, is_input, slot_number, out
+                );
+            }
+            var sh = LiteGraph.NODE_SLOT_HEIGHT;
+            var offset = sh * 0.5;
+            out[0] = is_input
+                ? this.pos[0] + offset
+                : this.pos[0] + this.size[0] + 1 - offset;
+            out[1] = this.pos[1] + 24 + slot_number * sh;
+            return out;
         };
         prototype.onDrawTitleBox = function (ctx) {
             drawTitleBox(this, ctx);
@@ -329,7 +355,6 @@
         this.size[0] = 450;
     }
     WaterjadeNode.title = "Node";
-    WaterjadeNode.slot_start_y = 7;
     WaterjadeNode.desc =
         "Configurable node — right-click to add/remove/rename slots";
     WaterjadeNode.prototype.onGetInputs = function () {
@@ -362,7 +387,6 @@
         lockSlots(this);
     }
     HRUInput.title = "HRU Input";
-    HRUInput.slot_start_y = 7;
     HRUInput.desc = "HRU pipeline input — single output, non-editable";
     HRUInput.prototype.getMenuOptions = function () {
         return [
@@ -387,7 +411,6 @@
         lockSlots(this);
     }
     HRUOutput.title = "HRU Output";
-    HRUOutput.slot_start_y = 7;
     HRUOutput.desc = "HRU pipeline output — single input, non-editable";
     HRUOutput.prototype.getMenuOptions = function () {
         return [
