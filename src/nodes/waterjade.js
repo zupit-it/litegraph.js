@@ -16,11 +16,10 @@
 //                   calls this function. Mutually exclusive with locked.
 //
 // Node types registered:
-//   - waterjade/node           generic, fully configurable
-//   - waterjade/internal_node  like generic but shows pencil badge when
-//                              onEditClick is assigned
-//   - waterjade/hru_input      special: one fixed output, locked, outlined
-//   - waterjade/hru_output     special: one fixed input,  locked, outlined
+//   - waterjade/node        generic, fully configurable; supports icon +
+//                           optional edit badge via onEditClick
+//   - waterjade/hru_input   special: one fixed output, locked, outlined
+//   - waterjade/hru_output  special: one fixed input,  locked, outlined
 
 (function (global) {
     var LiteGraph = global.LiteGraph;
@@ -93,12 +92,10 @@
         var x = pad;
         var y = -th + pad;
 
-        if (node.icon_bgcolor) {
-            ctx.fillStyle = node.icon_bgcolor;
-            ctx.beginPath();
-            ctx.roundRect(x, y, s, s, [8]);
-            ctx.fill();
-        }
+        ctx.fillStyle = node.icon_bgcolor || ZINC_800;
+        ctx.beginPath();
+        ctx.roundRect(x, y, s, s, [8]);
+        ctx.fill();
 
         var color = node.icon_color || WHITE;
         if (typeof Path2D !== "undefined" && node.icon instanceof Path2D) {
@@ -349,31 +346,6 @@
     };
     applyVisualMixin(WaterjadeNode.prototype);
     LiteGraph.registerNodeType("waterjade/node", WaterjadeNode);
-
-    // ---- Internal node (editable badge, configurable callback) ----
-    function InternalNode() {
-        this.addInput("IN", DEFAULT_TYPE, { removable: true });
-        this.addOutput("OUT", DEFAULT_TYPE, { removable: true });
-        this.size[0] = 450;
-        // onEditClick: optional callback set by the host app
-    }
-    InternalNode.title = "Internal Node";
-    InternalNode.slot_start_y = 7;
-    InternalNode.desc = "Internal node — shows an edit badge when onEditClick is set";
-    InternalNode.prototype.onGetInputs = function () {
-        return [["IN", DEFAULT_TYPE]];
-    };
-    InternalNode.prototype.onGetOutputs = function () {
-        return [["OUT", DEFAULT_TYPE]];
-    };
-    InternalNode.prototype.onExecute = function () {
-        if (!this.outputs) return;
-        for (var i = 0; i < this.outputs.length; i++) {
-            this.setOutputData(i, this.getInputData(i));
-        }
-    };
-    applyVisualMixin(InternalNode.prototype);
-    LiteGraph.registerNodeType("waterjade/internal_node", InternalNode);
 
     // ---- HRU Input ----
     function HRUInput() {

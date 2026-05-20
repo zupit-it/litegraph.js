@@ -47,7 +47,7 @@
         LiteGraph.NODE_DEFAULT_COLOR = palette.nodeTitle;
         LiteGraph.NODE_DEFAULT_BGCOLOR = palette.node;
         LiteGraph.NODE_DEFAULT_BOXCOLOR = palette.boxIdle;
-        LiteGraph.NODE_BOX_OUTLINE_COLOR = palette.portIdle;
+        LiteGraph.NODE_BOX_OUTLINE_COLOR = "#22D3EE";
         LiteGraph.NODE_DEFAULT_SHAPE = "round";
         LiteGraph.DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0)";
 

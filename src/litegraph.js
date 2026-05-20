@@ -9456,40 +9456,40 @@ LGraphNode.prototype.executeAction = function(action)
                 area[1] -= title_height;
                 area[3] += title_height;
             }
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.8;
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 1;
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE) {
                 ctx.rect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3]
+                    -1 + area[0],
+                    -1 + area[1],
+                    2 + area[2],
+                    2 + area[3]
                 );
             } else if (
                 shape == LiteGraph.ROUND_SHAPE ||
                 (shape == LiteGraph.CARD_SHAPE && node.flags.collapsed)
             ) {
                 ctx.roundRect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3],
-                    [this.round_radius * 2]
+                    -1 + area[0],
+                    -1 + area[1],
+                    2 + area[2],
+                    2 + area[3],
+                    [this.round_radius + 1]
                 );
             } else if (shape == LiteGraph.CARD_SHAPE) {
                 ctx.roundRect(
-                    -6 + area[0],
-                    -6 + area[1],
-                    12 + area[2],
-                    12 + area[3],
-                    [this.round_radius * 2,2,this.round_radius * 2,2]
+                    -1 + area[0],
+                    -1 + area[1],
+                    2 + area[2],
+                    2 + area[3],
+                    [this.round_radius + 1, 2, this.round_radius + 1, 2]
                 );
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,
                     size[1] * 0.5,
-                    size[0] * 0.5 + 6,
+                    size[0] * 0.5 + 1,
                     0,
                     Math.PI * 2
                 );
