@@ -13386,13 +13386,7 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuAdd
                 },
-                { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
-				//{ content: "Arrange", callback: that.graph.arrange },
-                //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
-            /*if (LiteGraph.showCanvasOptions){
-                options.push({ content: "Options", callback: that.showShowGraphOptionsPanel });
-            }*/
 
             if (Object.keys(this.selected_nodes).length > 1) {
                 options.push({
