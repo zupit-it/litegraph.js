@@ -210,9 +210,17 @@ function buildSidebar() {
         item.className = "sidebar-item";
         item.draggable = true;
         item.dataset.type = type;
-        item.innerHTML =
-            "<span class='item-name'>" + name + "</span>" +
-            "<span class='item-category'>" + category + "</span>";
+
+        var nameSpan = document.createElement("span");
+        nameSpan.className = "item-name";
+        nameSpan.textContent = name;
+
+        var catSpan = document.createElement("span");
+        catSpan.className = "item-category";
+        catSpan.textContent = category;
+
+        item.appendChild(nameSpan);
+        item.appendChild(catSpan);
 
         item.addEventListener("dragstart", function(e) {
             e.dataTransfer.setData("node-type", type);
@@ -223,6 +231,12 @@ function buildSidebar() {
     });
 
     var canvas = editor.canvas;
+
+    canvas.addEventListener("dragover", function(e) {
+        if (!e.dataTransfer.types || e.dataTransfer.types.indexOf("node-type") === -1) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+    });
 
     canvas.addEventListener("drop", function(e) {
         e.preventDefault();
