@@ -2,8 +2,8 @@
 //
 // Per-node visual properties (all optional, work on every Waterjade node):
 //   - icon          string (emoji/unicode) OR Path2D — drawn in a 40x40
-//                   orange rounded square at the top-left of the title bar.
-//   - icon_bgcolor  background color of the icon square (default orange).
+//                   colored square at the top-left of the title bar.
+//   - icon_bgcolor  background color of the icon square (none by default).
 //   - icon_color    fill color of the icon glyph (default white).
 //   - outlined      bool — draws a 1px border around the whole node.
 //   - outline_color border color when outlined (default Zinc-500).
@@ -11,11 +11,16 @@
 //                   title bar and disables slot/title editing.
 //   - lock_tooltip  string shown when hovering the lock (default
 //                   "no edit possible").
+//   - onEditClick   function(node, graphcanvas) — when set, shows a pencil
+//                   badge at the top-right instead of the lock. Clicking it
+//                   calls this function. Mutually exclusive with locked.
 //
 // Node types registered:
-//   - waterjade/node        generic, fully configurable
-//   - waterjade/hru_input   special: one fixed output, locked, outlined
-//   - waterjade/hru_output  special: one fixed input,  locked, outlined
+//   - waterjade/node           generic, fully configurable
+//   - waterjade/internal_node  like generic but shows pencil badge when
+//                              onEditClick is assigned
+//   - waterjade/hru_input      special: one fixed output, locked, outlined
+//   - waterjade/hru_output     special: one fixed input,  locked, outlined
 
 (function (global) {
     var LiteGraph = global.LiteGraph;
@@ -37,12 +42,16 @@
     // Lock icon, Lucide-style (viewBox 0 0 24 24, single path)
     var LOCK_PATH_D =
         "M18 10h-1V7a5 5 0 0 0-10 0v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm3.1-9H8.9V7a3.1 3.1 0 0 1 6.2 0v3z";
+    // Pencil icon, Lucide Edit2-style (viewBox 0 0 24 24, single closed path)
+    var PENCIL_PATH_D =
+        "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z";
 
     // Path2D caches — built lazily so loading the file in a non-DOM context
     // (eg. tests) doesn't crash.
     var _inputPath = null;
     var _outputPath = null;
     var _lockPath = null;
+    var _pencilPath = null;
     function inputPath() {
         if (_inputPath == null && typeof Path2D !== "undefined")
             _inputPath = new Path2D(INPUT_PATH_D);
@@ -57,6 +66,11 @@
         if (_lockPath == null && typeof Path2D !== "undefined")
             _lockPath = new Path2D(LOCK_PATH_D);
         return _lockPath;
+    }
+    function pencilPath() {
+        if (_pencilPath == null && typeof Path2D !== "undefined")
+            _pencilPath = new Path2D(PENCIL_PATH_D);
+        return _pencilPath;
     }
 
     // ---- drawing helpers ----
@@ -153,6 +167,41 @@
         return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
     }
 
+    function editRect(node) {
+        var th = LiteGraph.NODE_TITLE_HEIGHT;
+        var size = 30;
+        var pad = (th - size) / 2;
+        var x = node.size[0] - size - pad;
+        var y = -th + pad;
+        return { x: x, y: y, w: size, h: size };
+    }
+
+    function drawEditBadge(node, ctx, hovered) {
+        var r = editRect(node);
+        ctx.fillStyle = hovered ? "#52525B" : "#3F3F46";
+        ctx.strokeStyle = "#52525B";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, [6]);
+        ctx.fill();
+        ctx.stroke();
+
+        var path = pencilPath();
+        if (path) {
+            var glyphSize = 16;
+            var glyphPad = (r.w - glyphSize) / 2;
+            drawSvgPath(ctx, path, r.x + glyphPad, r.y + glyphPad, glyphSize, 24, WHITE);
+        }
+    }
+
+    function isMouseInsideEdit(node, gc) {
+        if (!gc || !gc.graph_mouse) return false;
+        var r = editRect(node);
+        var mx = gc.graph_mouse[0] - node.pos[0];
+        var my = gc.graph_mouse[1] - node.pos[1];
+        return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+    }
+
     function drawTooltip(ctx, anchorX, anchorY, text) {
         var prevFont = ctx.font;
         ctx.font = "500 11px 'Inter', 'Segoe UI', system-ui, sans-serif";
@@ -209,9 +258,12 @@
                     r.y,
                     node.lock_tooltip || "no edit possible"
                 );
-                // ask for another repaint so the tooltip stays in sync with the cursor
                 if (gc) gc.dirty_canvas = true;
             }
+        } else if (node.onEditClick) {
+            var hovered = isMouseInsideEdit(node, gc);
+            drawEditBadge(node, ctx, hovered);
+            if (hovered) gc && (gc.dirty_canvas = true);
         }
     }
 
@@ -219,6 +271,10 @@
         prototype.computeSize = function (out) {
             var size = LiteGraph.LGraphNode.prototype.computeSize.call(this, out);
             size[0] = 450;
+            // Figma: 24px top + 24px bottom padding around slots.
+            // litegraph formula naturally leaves 0.3*NODE_SLOT_HEIGHT below last slot;
+            // add the remaining gap to reach 24px total bottom padding.
+            size[1] += Math.round(24 - 0.3 * LiteGraph.NODE_SLOT_HEIGHT);
             return size;
         };
         prototype.onDrawTitleBox = function (ctx) {
@@ -239,6 +295,18 @@
         prototype.onDrawForeground = function (ctx, gc, canvas) {
             if (prevForeground) prevForeground.call(this, ctx, gc, canvas);
             drawForeground(this, ctx, gc);
+        };
+        var prevMouseDown = prototype.onMouseDown;
+        prototype.onMouseDown = function (e, pos, gc) {
+            if (this.onEditClick) {
+                var r = editRect(this);
+                if (pos[0] >= r.x && pos[0] <= r.x + r.w &&
+                    pos[1] >= r.y && pos[1] <= r.y + r.h) {
+                    this.onEditClick(this, gc);
+                    return true;
+                }
+            }
+            return prevMouseDown ? prevMouseDown.call(this, e, pos, gc) : false;
         };
     }
 
@@ -264,8 +332,7 @@
         this.size[0] = 450;
     }
     WaterjadeNode.title = "Node";
-    WaterjadeNode.min_height = 63;
-    WaterjadeNode.slot_start_y = 9;
+    WaterjadeNode.slot_start_y = 7;
     WaterjadeNode.desc =
         "Configurable node — right-click to add/remove/rename slots";
     WaterjadeNode.prototype.onGetInputs = function () {
@@ -283,6 +350,31 @@
     applyVisualMixin(WaterjadeNode.prototype);
     LiteGraph.registerNodeType("waterjade/node", WaterjadeNode);
 
+    // ---- Internal node (editable badge, configurable callback) ----
+    function InternalNode() {
+        this.addInput("IN", DEFAULT_TYPE, { removable: true });
+        this.addOutput("OUT", DEFAULT_TYPE, { removable: true });
+        this.size[0] = 450;
+        // onEditClick: optional callback set by the host app
+    }
+    InternalNode.title = "Internal Node";
+    InternalNode.slot_start_y = 7;
+    InternalNode.desc = "Internal node — shows an edit badge when onEditClick is set";
+    InternalNode.prototype.onGetInputs = function () {
+        return [["IN", DEFAULT_TYPE]];
+    };
+    InternalNode.prototype.onGetOutputs = function () {
+        return [["OUT", DEFAULT_TYPE]];
+    };
+    InternalNode.prototype.onExecute = function () {
+        if (!this.outputs) return;
+        for (var i = 0; i < this.outputs.length; i++) {
+            this.setOutputData(i, this.getInputData(i));
+        }
+    };
+    applyVisualMixin(InternalNode.prototype);
+    LiteGraph.registerNodeType("waterjade/internal_node", InternalNode);
+
     // ---- HRU Input ----
     function HRUInput() {
         this.addOutput("OUTPUT", DEFAULT_TYPE);
@@ -298,8 +390,7 @@
         lockSlots(this);
     }
     HRUInput.title = "HRU Input";
-    HRUInput.min_height = 63;
-    HRUInput.slot_start_y = 9;
+    HRUInput.slot_start_y = 7;
     HRUInput.desc = "HRU pipeline input — single output, non-editable";
     HRUInput.prototype.getMenuOptions = function () {
         return [
@@ -324,8 +415,7 @@
         lockSlots(this);
     }
     HRUOutput.title = "HRU Output";
-    HRUOutput.min_height = 63;
-    HRUOutput.slot_start_y = 9;
+    HRUOutput.slot_start_y = 7;
     HRUOutput.desc = "HRU pipeline output — single input, non-editable";
     HRUOutput.prototype.getMenuOptions = function () {
         return [

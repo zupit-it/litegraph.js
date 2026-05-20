@@ -35,7 +35,7 @@
         LiteGraph.NODE_TITLE_HEIGHT = 54;
         // baseline so the title text sits vertically centered against the icon
         LiteGraph.NODE_TITLE_TEXT_Y = 30;
-        LiteGraph.NODE_SLOT_HEIGHT = 30;
+        LiteGraph.NODE_SLOT_HEIGHT = 24;
         LiteGraph.NODE_WIDGET_HEIGHT = 28;
 
         // ---- Global color tokens ----

@@ -165,17 +165,27 @@ addDemo("Waterjade", function(){
 	m0.connect(0, agg, 0);
 	m1.connect(0, agg, 1);
 
-	// --- HRU input / output at bottom ---
+	// --- HRU input → internal → HRU output at bottom ---
 	var hruY = srcY[3] + srcH + 80;
+
 	var hruIn = LiteGraph.createNode("waterjade/hru_input");
 	hruIn.pos = [col[0], hruY];
 	graph.add(hruIn);
 
+	var internal = LiteGraph.createNode("waterjade/internal_node");
+	internal.title = "Precipitation Phase";
+	internal.pos = [col[1], hruY];
+	internal.onEditClick = function(node, gc) {
+		console.log("[waterjade] edit clicked:", node.title);
+	};
+	graph.add(internal);
+
 	var hruOut = LiteGraph.createNode("waterjade/hru_output");
-	hruOut.pos = [col[1], hruY];
+	hruOut.pos = [col[2], hruY];
 	graph.add(hruOut);
 
-	hruIn.connect(0, hruOut, 0);
+	hruIn.connect(0, internal, 0);
+	internal.connect(0, hruOut, 0);
 });
 
 addDemo("autobackup", function(){

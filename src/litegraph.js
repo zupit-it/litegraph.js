@@ -8891,9 +8891,9 @@ LGraphNode.prototype.executeAction = function(action)
                         doStroke = false;
                     } else {
 						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 ); //faster
+	                        ctx.rect(pos[0] - 5, pos[1] - 5, 10, 10 ); //faster
 						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+	                        ctx.arc(pos[0], pos[1], 5, 0, Math.PI * 2);
                     }
                     ctx.fill();
 
@@ -8990,9 +8990,9 @@ LGraphNode.prototype.executeAction = function(action)
                         doStroke = false;
                     } else {
 						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 );
+	                        ctx.rect(pos[0] - 5, pos[1] - 5, 10, 10 );
 						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+	                        ctx.arc(pos[0], pos[1], 5, 0, Math.PI * 2);
                     }
 
                     //trigger
