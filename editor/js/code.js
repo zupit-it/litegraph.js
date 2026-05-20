@@ -5,6 +5,9 @@ LiteGraph.node_images_path = "../nodes_data/";
 var editor = new LiteGraph.Editor("main",{miniwindow:false});
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
+if (LiteGraph.applyWaterjadeTheme) {
+	LiteGraph.applyWaterjadeTheme(editor.graphcanvas);
+}
 updateEditorHiPPICanvas();
 window.addEventListener("resize", function() { 
   editor.graphcanvas.resize();
@@ -105,6 +108,76 @@ addDemo("Audio Delay", "examples/audio_delay.json");
 addDemo("Audio Reverb", "examples/audio_reverb.json");
 addDemo("MIDI Generation", "examples/midi_generation.json");
 addDemo("Copy Paste", "examples/copypaste.json");
+addDemo("Waterjade", function(){
+	graph.clear();
+	var T = "wj";
+	var W = 450, GAP = 80;
+	var col = [40, 40 + W + GAP, 40 + (W + GAP) * 2];
+
+	// helpers
+	function source(title, x, y) {
+		var n = LiteGraph.createNode("waterjade/node");
+		n.title = title;
+		n.pos = [x, y];
+		n.removeInput(0);
+		n.outputs[0].name = "OUTPUT";
+		graph.add(n);
+		return n;
+	}
+	function joiner(title, x, y, inCount) {
+		var n = LiteGraph.createNode("waterjade/node");
+		n.title = title;
+		n.pos = [x, y];
+		n.inputs[0].name = "INPUT";
+		for (var k = 1; k < inCount; k++) n.addInput("INPUT", T);
+		n.outputs[0].name = "OUTPUT";
+		graph.add(n);
+		return n;
+	}
+
+	// geometry: node visual height = title(54) + body(63) = 117 for 1-slot
+	// space rows so mid nodes sit between their two sources
+	var srcH = 117, srcGap = 24;
+	var srcY = [];
+	for (var i = 0; i < 4; i++) srcY.push(40 + i * (srcH + srcGap));
+
+	var midH = 123; // 1-slot body auto-grows for 2 inputs → ~69px body
+	var mid0Y = Math.round((srcY[0] + srcY[1]) / 2 - midH / 2 + srcH / 2);
+	var mid1Y = Math.round((srcY[2] + srcY[3]) / 2 - midH / 2 + srcH / 2);
+	var aggY  = Math.round((mid0Y + mid1Y) / 2);
+
+	// --- nodes ---
+	var s0 = source("HRU1", col[0], srcY[0]);
+	var s1 = source("HRU2", col[0], srcY[1]);
+	var s2 = source("HRU3", col[0], srcY[2]);
+	var s3 = source("HRU4", col[0], srcY[3]);
+
+	var m0 = joiner("DAM1", col[1], mid0Y, 2);
+	var m1 = joiner("DAM2", col[1], mid1Y, 2);
+
+	var agg = joiner("RESERVOIR", col[2], aggY, 2);
+
+	// --- connections ---
+	s0.connect(0, m0, 0);
+	s1.connect(0, m0, 1);
+	s2.connect(0, m1, 0);
+	s3.connect(0, m1, 1);
+	m0.connect(0, agg, 0);
+	m1.connect(0, agg, 1);
+
+	// --- HRU input / output at bottom ---
+	var hruY = srcY[3] + srcH + 80;
+	var hruIn = LiteGraph.createNode("waterjade/hru_input");
+	hruIn.pos = [col[0], hruY];
+	graph.add(hruIn);
+
+	var hruOut = LiteGraph.createNode("waterjade/hru_output");
+	hruOut.pos = [col[1], hruY];
+	graph.add(hruOut);
+
+	hruIn.connect(0, hruOut, 0);
+});
+
 addDemo("autobackup", function(){
 	var data = localStorage.getItem("litegraphg demo backup");
 	if(!data)
