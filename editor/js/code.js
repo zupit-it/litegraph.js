@@ -193,3 +193,58 @@ function enableWebGL()
 // Tests
 // CopyPasteWithConnectionToUnselectedOutputTest();
 // demo();
+
+function buildSidebar() {
+    var sidebar = document.getElementById("node-sidebar");
+    if (!sidebar) return;
+
+    var types = Object.keys(LiteGraph.registered_node_types).sort();
+
+    types.forEach(function(type) {
+        var slashIndex = type.indexOf("/");
+        var name = slashIndex !== -1 ? type.slice(slashIndex + 1) : type;
+        var category = slashIndex !== -1 ? type.slice(0, slashIndex) : "";
+
+        var item = document.createElement("div");
+        item.className = "sidebar-item";
+        item.draggable = true;
+        item.dataset.type = type;
+        item.innerHTML =
+            "<span class='item-name'>" + name + "</span>" +
+            "<span class='item-category'>" + category + "</span>";
+
+        item.addEventListener("dragstart", function(e) {
+            e.dataTransfer.setData("node-type", type);
+            e.dataTransfer.effectAllowed = "copy";
+        });
+
+        sidebar.appendChild(item);
+    });
+
+    var canvas = editor.canvas;
+
+    canvas.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+    });
+
+    canvas.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var type = e.dataTransfer.getData("node-type");
+        if (!type) return;
+
+        var rect = canvas.getBoundingClientRect();
+        var scale = graphcanvas.ds.scale;
+        var offset = graphcanvas.ds.offset;
+        var canvasX = (e.clientX - rect.left) / scale - offset[0];
+        var canvasY = (e.clientY - rect.top) / scale - offset[1];
+
+        var node = LiteGraph.createNode(type);
+        if (!node) return;
+        node.pos = [canvasX, canvasY];
+        graph.add(node);
+        graphcanvas.draw(true, true);
+    });
+}
+
+window.addEventListener("load", buildSidebar);
