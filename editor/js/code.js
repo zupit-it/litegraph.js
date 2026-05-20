@@ -197,6 +197,7 @@ function enableWebGL()
 function buildSidebar() {
     var sidebar = document.getElementById("node-sidebar");
     if (!sidebar) return;
+    if (sidebar.hasChildNodes()) return;
 
     var types = Object.keys(LiteGraph.registered_node_types).sort();
 
@@ -222,11 +223,6 @@ function buildSidebar() {
     });
 
     var canvas = editor.canvas;
-
-    canvas.addEventListener("dragover", function(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-    });
 
     canvas.addEventListener("drop", function(e) {
         e.preventDefault();
