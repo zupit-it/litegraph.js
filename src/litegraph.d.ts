@@ -234,6 +234,7 @@ export const LiteGraph: {
         }
     >;
 
+    applyWaterjadeTheme(graphcanvas: LGraphCanvas): void;
     createNode<T extends LGraphNode = LGraphNode>(type: string): T;
     /** Register a node class so it can be listed when the user wants to create a new one */
     registerNodeType(type: string, base: { new (): LGraphNode }): void;
