@@ -797,10 +797,9 @@
 					return reader.readAsBinaryString(url);
 			}
 			return null;
-		}
-    });
+		},
 
-    var palette = {
+    WATERJADE_PALETTE: {
         bg: "#000000",
         node: "#18181B",            // generic node body & title bg (Zinc-900)
         nodeTitle: "#18181B",
@@ -814,40 +813,40 @@
         portIdle: "#F08C00",
         portActive: "#FFAA33",
         portConnecting: "#FFAA33",
-    };
+    },
 
-    LiteGraph.WATERJADE_PALETTE = palette;
+    applyWaterjadeTheme: function (graphcanvas) {
+        var palette = this.WATERJADE_PALETTE;
 
-    LiteGraph.applyWaterjadeTheme = function (graphcanvas) {
         // ---- Global geometry tokens ----
         // header height 54 = 40px icon + 7px padding top/bottom
-        LiteGraph.NODE_TITLE_HEIGHT = 54;
+        this.NODE_TITLE_HEIGHT = 54;
         // baseline so the title text sits vertically centered against the icon
-        LiteGraph.NODE_TITLE_TEXT_Y = 30;
-        LiteGraph.NODE_SLOT_HEIGHT = 26;
-        LiteGraph.NODE_WIDGET_HEIGHT = 28;
+        this.NODE_TITLE_TEXT_Y = 30;
+        this.NODE_SLOT_HEIGHT = 26;
+        this.NODE_WIDGET_HEIGHT = 28;
 
         // ---- Global color tokens ----
-        LiteGraph.NODE_TITLE_COLOR = palette.textPrimary;
-        LiteGraph.NODE_SELECTED_TITLE_COLOR = palette.textPrimary;
-        LiteGraph.NODE_TEXT_COLOR = palette.textPrimary;
-        LiteGraph.NODE_TEXT_SIZE = 13;
-        LiteGraph.NODE_SUBTEXT_SIZE = 12;
-        LiteGraph.NODE_DEFAULT_COLOR = palette.nodeTitle;
-        LiteGraph.NODE_DEFAULT_BGCOLOR = palette.node;
-        LiteGraph.NODE_DEFAULT_BOXCOLOR = palette.boxIdle;
-        LiteGraph.NODE_BOX_OUTLINE_COLOR = "#22D3EE";
-        LiteGraph.NODE_DEFAULT_SHAPE = "round";
-        LiteGraph.DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0)";
+        this.NODE_TITLE_COLOR = palette.textPrimary;
+        this.NODE_SELECTED_TITLE_COLOR = palette.textPrimary;
+        this.NODE_TEXT_COLOR = palette.textPrimary;
+        this.NODE_TEXT_SIZE = 13;
+        this.NODE_SUBTEXT_SIZE = 12;
+        this.NODE_DEFAULT_COLOR = palette.nodeTitle;
+        this.NODE_DEFAULT_BGCOLOR = palette.node;
+        this.NODE_DEFAULT_BOXCOLOR = palette.boxIdle;
+        this.NODE_BOX_OUTLINE_COLOR = "#22D3EE";
+        this.NODE_DEFAULT_SHAPE = "round";
+        this.DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0)";
 
-        LiteGraph.WIDGET_BGCOLOR = palette.widgetBg;
-        LiteGraph.WIDGET_OUTLINE_COLOR = palette.widgetOutline;
-        LiteGraph.WIDGET_TEXT_COLOR = palette.textPrimary;
-        LiteGraph.WIDGET_SECONDARY_TEXT_COLOR = palette.textSecondary;
+        this.WIDGET_BGCOLOR = palette.widgetBg;
+        this.WIDGET_OUTLINE_COLOR = palette.widgetOutline;
+        this.WIDGET_TEXT_COLOR = palette.textPrimary;
+        this.WIDGET_SECONDARY_TEXT_COLOR = palette.textSecondary;
 
-        LiteGraph.LINK_COLOR = palette.link;
-        LiteGraph.EVENT_LINK_COLOR = palette.link;
-        LiteGraph.CONNECTING_LINK_COLOR = palette.portConnecting;
+        this.LINK_COLOR = palette.link;
+        this.EVENT_LINK_COLOR = palette.link;
+        this.CONNECTING_LINK_COLOR = palette.portConnecting;
 
         if (global.LGraphCanvas) {
             global.LGraphCanvas.link_type_colors = {
@@ -871,7 +870,7 @@
         graphcanvas.render_curved_connections = true;
         graphcanvas.render_link_centers = false;
         graphcanvas.allow_collapse = false;
-        graphcanvas.links_render_mode = LiteGraph.SPLINE_LINK;
+        graphcanvas.links_render_mode = this.SPLINE_LINK;
         graphcanvas.round_radius = 8;
         graphcanvas.connections_width = 1.5;
 
@@ -910,7 +909,9 @@
         graphcanvas._waterjade_theme = true;
 
         if (graphcanvas.setDirty) graphcanvas.setDirty(true, true);
-    };
+    }
+
+    });
 
     //timer that works everywhere
     if (typeof performance != "undefined") {

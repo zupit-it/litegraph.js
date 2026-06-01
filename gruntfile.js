@@ -13,7 +13,8 @@ module.exports = function (grunt) {
       'src/nodes/glfx.js',
       'src/nodes/midi.js',
       'src/nodes/audio.js',
-      'src/nodes/network.js'
+      'src/nodes/network.js',
+      'src/nodes/waterjade.js'
     ],
     concat: {
       build: {

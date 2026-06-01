@@ -416,4 +416,4 @@
     };
     applyVisualMixin(HRUOutput.prototype);
     LiteGraph.registerNodeType("waterjade/hru_output", HRUOutput);
-})(typeof window !== "undefined" ? window : globalThis);
+})(this);

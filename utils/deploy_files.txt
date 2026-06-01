@@ -15,3 +15,4 @@
 ../src/nodes/midi.js
 ../src/nodes/audio.js
 ../src/nodes/network.js
+../src/nodes/waterjade.js
