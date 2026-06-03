@@ -925,6 +925,11 @@ export declare class LGraphNode {
     ): void;
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-behaviour
+    /** Waterjade: called when the edit badge (pencil icon) is clicked */
+    onEditClick?: (node: LGraphNode, graphCanvas: LGraphCanvas) => void;
+    /** Waterjade: called on double-click of the node body */
+    onDblClick?: (event: MouseEvent, pos: Vector2, graphCanvas: LGraphCanvas) => void;
+
     onMouseDown?(
         event: MouseEvent,
         pos: Vector2,
