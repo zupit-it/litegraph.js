@@ -539,6 +539,10 @@ export declare class LGraph {
     beforeChange(info?: LGraphNode): void;
     afterChange(info?: LGraphNode): void;                       
     connectionChange(node: LGraphNode): void;
+    /** Assignable hook called after any graph change (node moved, added, removed) */
+    onAfterChange?: ((graph: LGraph, info?: LGraphNode) => void) | null;
+    /** Assignable hook called when a connection is created or removed */
+    onConnectionChange?: ((node: LGraphNode) => void) | null;
     /** returns if the graph is in live mode */
     isLive(): boolean;
     /** clears the triggered slot animation in all links (stop visual animation) */
