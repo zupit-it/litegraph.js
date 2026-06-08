@@ -7130,6 +7130,10 @@ LGraphNode.prototype.executeAction = function(action)
                 this.connecting_pos = null;
                 this.connecting_node = null;
                 this.connecting_slot = -1;
+
+                if (this.graph && this.graph.onAfterConnectionChange) {
+                    this.graph.onAfterConnectionChange();
+                }
             } //not dragging connection
             else if (this.resizing_node) {
                 this.dirty_canvas = true;
