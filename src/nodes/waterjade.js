@@ -25,6 +25,13 @@
     var LiteGraph = global.LiteGraph;
     if (!LiteGraph) return;
 
+    var WaterjadeNodeTypes = {
+        NODE: "waterjade/node",
+        HRU_INPUT: "waterjade/hru_input",
+        HRU_OUTPUT: "waterjade/hru_output",
+    };
+    LiteGraph.WaterjadeNodeTypes = WaterjadeNodeTypes;
+
     var DEFAULT_TYPE = "wj";
     var ORANGE = "#F08C00";
     var WHITE = "#FFFFFF";
@@ -367,7 +374,7 @@
         }
     };
     applyVisualMixin(WaterjadeNode.prototype);
-    LiteGraph.registerNodeType("waterjade/node", WaterjadeNode);
+    LiteGraph.registerNodeType(WaterjadeNodeTypes.NODE, WaterjadeNode);
 
     // ---- HRU Input ----
     function HRUInput() {
@@ -391,7 +398,7 @@
         ];
     };
     applyVisualMixin(HRUInput.prototype);
-    LiteGraph.registerNodeType("waterjade/hru_input", HRUInput);
+    LiteGraph.registerNodeType(WaterjadeNodeTypes.HRU_INPUT, HRUInput);
 
     // ---- HRU Output ----
     function HRUOutput() {
@@ -415,5 +422,5 @@
         ];
     };
     applyVisualMixin(HRUOutput.prototype);
-    LiteGraph.registerNodeType("waterjade/hru_output", HRUOutput);
+    LiteGraph.registerNodeType(WaterjadeNodeTypes.HRU_OUTPUT, HRUOutput);
 })(this);

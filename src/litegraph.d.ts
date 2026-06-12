@@ -210,6 +210,12 @@ export const LiteGraph: {
     TRANSPARENT_TITLE: 2;
     AUTOHIDE_TITLE: 3;
 
+    WaterjadeNodeTypes: {
+        readonly NODE: "waterjade/node";
+        readonly HRU_INPUT: "waterjade/hru_input";
+        readonly HRU_OUTPUT: "waterjade/hru_output";
+    };
+
     node_images_path: string;
 
     debug: boolean;
