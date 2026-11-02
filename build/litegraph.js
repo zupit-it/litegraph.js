@@ -6946,6 +6946,9 @@ LGraphNode.prototype.executeAction = function(action)
         var now = LiteGraph.getTime();
         e.click_time = now - this.last_mouseclick;
         this.last_mouse_dragging = false;
+		// Waterjade: released within a few px of where it was pressed → a click on the node, not a drag (see onClick)
+		var click_start = this.last_click_position;
+		var is_click = !!click_start && Math.abs(e.clientX - click_start[0]) < 4 && Math.abs(e.clientY - click_start[1]) < 4;
 		this.last_click_position = null;
 
 		if(this.block_click)
@@ -7169,6 +7172,9 @@ LGraphNode.prototype.executeAction = function(action)
 					this.onNodeMoved( this.node_dragged );
 				this.graph.afterChange(this.node_dragged);
                 this.node_dragged = null;
+                if (is_click && node.onClick) {
+                    node.onClick(e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
+                }
             } //no node being dragged
             else {
                 //get node over
@@ -29531,10 +29537,16 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
 //   - onEditClick   function(node, graphcanvas) — when set, shows a pencil
 //                   badge at the top-right instead of the lock. Clicking it
 //                   calls this function. Mutually exclusive with locked.
+//   - edit_tooltip  string shown when hovering the pencil (none by default).
+//   - onDiagramClick function(node, graphcanvas) — when set, shows a diagram
+//                   badge 8px left of the lock/pencil (or at the top-right
+//                   if neither is shown). Clicking it calls this function.
+//   - diagram_tooltip string shown when hovering it (none by default).
 //
 // Node types registered:
 //   - waterjade/node        generic, fully configurable; supports icon +
-//                           optional edit badge via onEditClick
+//                           optional edit/diagram badges via onEditClick /
+//                           onDiagramClick
 //   - waterjade/hru_input   special: one fixed output, locked, outlined
 //   - waterjade/hru_output  special: one fixed input,  locked, outlined
 
@@ -29569,6 +29581,9 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
     // Pencil icon (viewBox 0 0 13 13, evenodd)
     var PENCIL_PATH_D =
         "M9.93414 1.07885C9.58302 1.0707 9.27233 1.1852 9.07848 1.3794C9.06084 1.39708 9.04217 1.41334 9.02264 1.42815L1.28129 9.18377L1.12596 11.1164L3.08726 10.9396L10.8865 3.12602C11.079 2.93318 11.1857 2.63388 11.1724 2.29549C11.1591 1.95647 11.0263 1.6345 10.8147 1.42254C10.6096 1.21699 10.2853 1.087 9.93414 1.07885ZM8.38534 0.551889C8.82396 0.153231 9.40976 -0.0120661 9.95907 0.000682071C10.5373 0.0141003 11.1424 0.225617 11.5759 0.659955C12.0031 1.08788 12.2255 1.67899 12.2481 2.25306C12.2706 2.82777 12.0939 3.44156 11.6477 3.8886L3.71045 11.8404C3.62129 11.9298 3.50367 11.9849 3.37809 11.9962L0.586439 12.2478C0.428398 12.2621 0.272136 12.2057 0.159407 12.0938C0.0466787 11.982 -0.0110276 11.826 0.00170795 11.6675L0.224178 8.89947C0.234437 8.77183 0.289704 8.65201 0.380087 8.56146L8.3173 0.609622C8.33859 0.588291 8.36137 0.569027 8.38534 0.551889Z";
+    // Diagram/hierarchy icon (viewBox 0 0 16 16, nonzero)
+    var DIAGRAM_PATH_D =
+        "M9.19922 1C9.97242 1 10.5992 1.6268 10.5992 2.4V4.8C10.5992 5.5732 9.97242 6.2 9.19922 6.2H8.59922V7.4H12.7992C13.5706 7.4 14.1992 8.02863 14.1992 8.8V9.8H14.3992C15.1724 9.8 15.7992 10.4268 15.7992 11.2V12.8C15.7992 13.5732 15.1724 14.2 14.3992 14.2H12.7992C12.026 14.2 11.3992 13.5732 11.3992 12.8V11.2C11.3992 10.4268 12.026 9.8 12.7992 9.8H12.9992V8.8C12.9992 8.69137 12.9078 8.6 12.7992 8.6H8.59922V9.8H8.79922C9.57059 9.8 10.1992 10.4286 10.1992 11.2V12.8C10.1992 13.5714 9.57059 14.2 8.79922 14.2H7.19922C6.42785 14.2 5.79922 13.5714 5.79922 12.8V11.2C5.79922 10.4286 6.42785 9.8 7.19922 9.8H7.39922V8.6H3.19922C3.09059 8.6 2.99922 8.69137 2.99922 8.8V9.8H3.19922C3.97242 9.8 4.59922 10.4268 4.59922 11.2V12.8C4.59922 13.5732 3.97242 14.2 3.19922 14.2H1.59922C0.82602 14.2 0.199219 13.5732 0.199219 12.8V11.2C0.199219 10.4268 0.82602 9.8 1.59922 9.8H1.79922V8.8C1.79922 8.02863 2.42785 7.4 3.19922 7.4H7.39922V6.2H6.79922C6.02602 6.2 5.39922 5.5732 5.39922 4.8V2.4C5.39922 1.6268 6.02602 1 6.79922 1H9.19922ZM1.59922 11C1.48876 11 1.39922 11.0895 1.39922 11.2V12.8C1.39922 12.9105 1.48876 13 1.59922 13H3.19922C3.30968 13 3.39922 12.9105 3.39922 12.8V11.2C3.39922 11.0895 3.30968 11 3.19922 11H1.59922ZM7.19922 11C7.09059 11 6.99922 11.0914 6.99922 11.2V12.8C6.99922 12.9086 7.09059 13 7.19922 13H8.79922C8.90785 13 8.99922 12.9086 8.99922 12.8V11.2C8.99922 11.0914 8.90785 11 8.79922 11H7.19922ZM12.7992 11C12.6888 11 12.5992 11.0895 12.5992 11.2V12.8C12.5992 12.9105 12.6888 13 12.7992 13H14.3992C14.5097 13 14.5992 12.9105 14.5992 12.8V11.2C14.5992 11.0895 14.5097 11 14.3992 11H12.7992ZM6.79922 2.2C6.68876 2.2 6.59922 2.28954 6.59922 2.4V4.8C6.59922 4.91046 6.68876 5 6.79922 5H9.19922C9.30968 5 9.39922 4.91046 9.39922 4.8V2.4C9.39922 2.28954 9.30968 2.2 9.19922 2.2H6.79922Z";
 
     // Path2D caches — built lazily so loading the file in a non-DOM context
     // (eg. tests) doesn't crash.
@@ -29576,6 +29591,7 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
     var _outputPath = null;
     var _lockPath = null;
     var _pencilPath = null;
+    var _diagramPath = null;
     function inputPath() {
         if (_inputPath == null && typeof Path2D !== "undefined")
             _inputPath = new Path2D(INPUT_PATH_D);
@@ -29595,6 +29611,11 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
         if (_pencilPath == null && typeof Path2D !== "undefined")
             _pencilPath = new Path2D(PENCIL_PATH_D);
         return _pencilPath;
+    }
+    function diagramPath() {
+        if (_diagramPath == null && typeof Path2D !== "undefined")
+            _diagramPath = new Path2D(DIAGRAM_PATH_D);
+        return _diagramPath;
     }
 
     // ---- drawing helpers ----
@@ -29650,52 +29671,41 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
         }
     }
 
-    function lockRect(node) {
-        var th = LiteGraph.NODE_TITLE_HEIGHT;
-        var size = 30;
-        var pad = (th - size) / 2; // 12
-        var x = node.size[0] - size - pad;
-        var y = -th + pad;
-        return { x: x, y: y, w: size, h: size };
-    }
+    // ---- title-bar badges (top-right, laid out right to left) ----
 
-    function drawLockBadge(node, ctx) {
-        var r = lockRect(node);
-        ctx.fillStyle = "#3F3F46";
-        ctx.strokeStyle = "#52525B";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, [6]);
-        ctx.fill();
-        ctx.stroke();
+    var BADGE_SIZE = 30;
+    var BADGE_GAP = 8;
 
-        var path = lockPath();
-        if (path) {
-            var glyphSize = 18;
-            var glyphPad = (r.w - glyphSize) / 2;
-            drawSvgPath(ctx, path, r.x + glyphPad, r.y + glyphPad, glyphSize, 11, ZINC_300, 13, "evenodd");
+    // Visible badges for a node, slot 0 = rightmost. Lock and pencil share
+    // slot 0 (mutually exclusive); the diagram badge sits at their left.
+    function getBadges(node) {
+        var list = [];
+        if (node.locked) {
+            list.push({ path: lockPath(), glyph: 18, vbW: 11, vbH: 13, rule: "evenodd",
+                tooltip: node.lock_tooltip || "no edit possible" });
+        } else if (node.onEditClick) {
+            list.push({ path: pencilPath(), glyph: 16, vbW: 13, vbH: 13, rule: "evenodd",
+                tooltip: node.edit_tooltip, onClick: node.onEditClick });
         }
+        if (node.onDiagramClick) {
+            list.push({ path: diagramPath(), glyph: 16, vbW: 16, vbH: 16, rule: "nonzero",
+                tooltip: node.diagram_tooltip, onClick: node.onDiagramClick });
+        }
+        return list;
     }
 
-    function isMouseInsideLock(node, gc) {
-        if (!gc || !gc.graph_mouse) return false;
-        var r = lockRect(node);
-        var mx = gc.graph_mouse[0] - node.pos[0];
-        var my = gc.graph_mouse[1] - node.pos[1];
-        return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
-    }
-
-    function editRect(node) {
+    function badgeRect(node, slot) {
         var th = LiteGraph.NODE_TITLE_HEIGHT;
-        var size = 30;
-        var pad = (th - size) / 2;
-        var x = node.size[0] - size - pad;
-        var y = -th + pad;
-        return { x: x, y: y, w: size, h: size };
+        var pad = (th - BADGE_SIZE) / 2; // 12
+        var x = node.size[0] - BADGE_SIZE - pad - slot * (BADGE_SIZE + BADGE_GAP);
+        return { x: x, y: -th + pad, w: BADGE_SIZE, h: BADGE_SIZE };
     }
 
-    function drawEditBadge(node, ctx, hovered) {
-        var r = editRect(node);
+    function isInside(r, x, y) {
+        return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    }
+
+    function drawBadge(ctx, r, badge, hovered) {
         ctx.fillStyle = hovered ? "#52525B" : "#3F3F46";
         ctx.strokeStyle = "#52525B";
         ctx.lineWidth = 1;
@@ -29704,20 +29714,11 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
         ctx.fill();
         ctx.stroke();
 
-        var path = pencilPath();
-        if (path) {
-            var glyphSize = 16;
-            var glyphPad = (r.w - glyphSize) / 2;
-            drawSvgPath(ctx, path, r.x + glyphPad, r.y + glyphPad, glyphSize, 13, ZINC_300, 13, "evenodd");
+        if (badge.path) {
+            var glyphPad = (r.w - badge.glyph) / 2;
+            drawSvgPath(ctx, badge.path, r.x + glyphPad, r.y + glyphPad, badge.glyph,
+                badge.vbW, ZINC_300, badge.vbH, badge.rule);
         }
-    }
-
-    function isMouseInsideEdit(node, gc) {
-        if (!gc || !gc.graph_mouse) return false;
-        var r = editRect(node);
-        var mx = gc.graph_mouse[0] - node.pos[0];
-        var my = gc.graph_mouse[1] - node.pos[1];
-        return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
     }
 
     function drawTooltip(ctx, anchorX, anchorY, text) {
@@ -29766,22 +29767,18 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
             ctx.stroke();
         }
 
-        if (node.locked) {
-            drawLockBadge(node, ctx);
-            if (isMouseInsideLock(node, gc)) {
-                var r = lockRect(node);
-                drawTooltip(
-                    ctx,
-                    r.x + r.w / 2,
-                    r.y,
-                    node.lock_tooltip || "no edit possible"
-                );
-                if (gc) gc.dirty_canvas = true;
+        var badges = getBadges(node);
+        var mouse = gc && gc.graph_mouse;
+        for (var i = 0; i < badges.length; i++) {
+            var b = badges[i];
+            var r = badgeRect(node, i);
+            var hovered = !!mouse &&
+                isInside(r, mouse[0] - node.pos[0], mouse[1] - node.pos[1]);
+            drawBadge(ctx, r, b, hovered && !!b.onClick);
+            if (hovered) {
+                if (b.tooltip) drawTooltip(ctx, r.x + r.w / 2, r.y, b.tooltip);
+                gc.dirty_canvas = true;
             }
-        } else if (node.onEditClick) {
-            var hovered = isMouseInsideEdit(node, gc);
-            drawEditBadge(node, ctx, hovered);
-            if (hovered) gc && (gc.dirty_canvas = true);
         }
     }
 
@@ -29842,11 +29839,10 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
         };
         var prevMouseDown = prototype.onMouseDown;
         prototype.onMouseDown = function (e, pos, gc) {
-            if (this.onEditClick) {
-                var r = editRect(this);
-                if (pos[0] >= r.x && pos[0] <= r.x + r.w &&
-                    pos[1] >= r.y && pos[1] <= r.y + r.h) {
-                    this.onEditClick(this, gc);
+            var badges = getBadges(this);
+            for (var i = 0; i < badges.length; i++) {
+                if (badges[i].onClick && isInside(badgeRect(this, i), pos[0], pos[1])) {
+                    badges[i].onClick.call(this, this, gc);
                     return true;
                 }
             }

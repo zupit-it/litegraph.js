@@ -6946,6 +6946,9 @@ LGraphNode.prototype.executeAction = function(action)
         var now = LiteGraph.getTime();
         e.click_time = now - this.last_mouseclick;
         this.last_mouse_dragging = false;
+		// Waterjade: released within a few px of where it was pressed → a click on the node, not a drag (see onClick)
+		var click_start = this.last_click_position;
+		var is_click = !!click_start && Math.abs(e.clientX - click_start[0]) < 4 && Math.abs(e.clientY - click_start[1]) < 4;
 		this.last_click_position = null;
 
 		if(this.block_click)
@@ -7169,6 +7172,9 @@ LGraphNode.prototype.executeAction = function(action)
 					this.onNodeMoved( this.node_dragged );
 				this.graph.afterChange(this.node_dragged);
                 this.node_dragged = null;
+                if (is_click && node.onClick) {
+                    node.onClick(e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
+                }
             } //no node being dragged
             else {
                 //get node over
