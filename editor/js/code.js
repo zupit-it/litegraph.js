@@ -186,6 +186,11 @@ addDemo("Waterjade", function(){
 	internal.onEditClick = function(node, gc) {
 		console.log("[waterjade] edit clicked:", node.title);
 	};
+	internal.edit_tooltip = "Edit";
+	internal.onDiagramClick = function(node, gc) {
+		console.log("[waterjade] diagram clicked:", node.title);
+	};
+	internal.diagram_tooltip = "Open diagram";
 	graph.add(internal);
 
 	var hruOut = LiteGraph.createNode("waterjade/hru_output");
