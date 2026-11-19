@@ -6419,7 +6419,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 
                     //double clicking
-                    if (this.allow_interaction && is_double_click && this.selected_nodes[node.id]) {
+                    if (this.allow_interaction && is_double_click && (this.selected_nodes[node.id] || node.selectable === false)) {
                         //double click node
                         if (node.onDblClick) {
                             node.onDblClick( e, pos, this );
@@ -6732,6 +6732,8 @@ LGraphNode.prototype.executeAction = function(action)
         } else if ((this.allow_interaction || (node && node.flags.allow_interaction)) && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
+                // Waterjade: highlight only the slot under the mouse now (set below), not the last one hovered
+                this.clearConnectingHighlight();
             }
 
             //remove mouseover flag
@@ -6873,8 +6875,10 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.node_dragged && !this.live_mode) {
                 this.nodes_moved = true;
 				//console.log("draggin!",this.selected_nodes);
-                for (var i in this.selected_nodes) {
-                    var n = this.selected_nodes[i];
+				// Waterjade: a non-selectable node is never in selected_nodes, so drag it alone
+				var dragged_nodes = this.node_dragged.selectable === false ? [this.node_dragged] : this.selected_nodes;
+                for (var i in dragged_nodes) {
+                    var n = dragged_nodes[i];
                     n.pos[0] += delta[0] / this.ds.scale;
                     n.pos[1] += delta[1] / this.ds.scale;
                     if (!n.is_selected) this.processNodeSelected(n, e); /*
@@ -7133,6 +7137,8 @@ LGraphNode.prototype.executeAction = function(action)
                 this.connecting_pos = null;
                 this.connecting_node = null;
                 this.connecting_slot = -1;
+                // Waterjade: else the next drag starts by highlighting the slot this one was released on
+                this.clearConnectingHighlight();
 
                 if (this.graph && this.graph.onAfterConnectionChange) {
                     this.graph.onAfterConnectionChange();
@@ -7758,7 +7764,15 @@ LGraphNode.prototype.executeAction = function(action)
         this.setDirty(true);
     };
 
+    /** Waterjade: forget the slot highlighted while dragging a link */
+    LGraphCanvas.prototype.clearConnectingHighlight = function() {
+        this._highlight_input = null;
+        this._highlight_input_slot = null;
+        this._highlight_output = null;
+    };
+
     LGraphCanvas.prototype.processNodeSelected = function(node, e) {
+        if (node.selectable === false) return; // Waterjade: clicking it leaves the current selection untouched
         this.selectNode(node, e && (e.shiftKey || e.ctrlKey || this.multi_select));
         if (this.onNodeSelected) {
             this.onNodeSelected(node);
@@ -7794,6 +7808,7 @@ LGraphNode.prototype.executeAction = function(action)
 		if (typeof nodes == "string") nodes = [nodes];
         for (var i in nodes) {
             var node = nodes[i];
+            if (node.selectable === false) continue; // Waterjade
             if (node.is_selected) {
                 this.deselectNode(node);
                 continue;
@@ -8955,9 +8970,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle =
                         slot.link != null
                             ? slot.color_on ||
+                              node.port_color ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_on
                             : slot.color_off ||
+                              node.port_color ||
                               this.default_connection_color_byTypeOff[slot_type] ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_off;
@@ -9061,9 +9078,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle =
                         slot.links && slot.links.length
                             ? slot.color_on ||
+                              node.port_color ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_on
                             : slot.color_off ||
+                              node.port_color ||
                               this.default_connection_color_byTypeOff[slot_type] ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_off;
@@ -9617,7 +9636,7 @@ LGraphNode.prototype.executeAction = function(action)
                     Math.PI * 2
                 );
             }
-            ctx.strokeStyle = LiteGraph.NODE_BOX_OUTLINE_COLOR;
+            ctx.strokeStyle = node.selected_outline_color || LiteGraph.NODE_BOX_OUTLINE_COLOR;
             ctx.stroke();
             ctx.strokeStyle = fgcolor;
             ctx.globalAlpha = 1;

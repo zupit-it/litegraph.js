@@ -945,6 +945,25 @@ export declare class LGraphNode {
     lock_tooltip?: string;
     edit_tooltip?: string;
     diagram_tooltip?: string;
+    /** Waterjade: extra title-bar badges, drawn right to left after (= to the left of) lock/pencil/diagram */
+    badges?: {
+        icon: Path2D;
+        /** square viewBox size of the icon path, default 16 */
+        viewbox?: number;
+        fill_rule?: CanvasFillRule;
+        /** glyph color, default Zinc-300 */
+        color?: string;
+        /** badge background (and border) color, default Zinc-700 */
+        bgcolor?: string;
+        tooltip?: string;
+        onClick?: (node: LGraphNode, graphCanvas: LGraphCanvas) => void;
+    }[];
+    /** Color of every input/output port of the node; a slot's own color_on/color_off still wins */
+    port_color?: string;
+    /** false → clicking the node doesn't select it (no selection border); it can still be dragged and clicked. Default true */
+    selectable?: boolean;
+    /** Selection border color, default LiteGraph.NODE_BOX_OUTLINE_COLOR */
+    selected_outline_color?: string;
     /** Waterjade: called on click of the node body (released without dragging); not on slots, widgets or badges */
     onClick?: (event: MouseEvent, pos: Vector2, graphCanvas: LGraphCanvas) => void;
     /** Waterjade: called on double-click of the node body */

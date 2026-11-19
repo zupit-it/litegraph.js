@@ -6419,7 +6419,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 
                     //double clicking
-                    if (this.allow_interaction && is_double_click && this.selected_nodes[node.id]) {
+                    if (this.allow_interaction && is_double_click && (this.selected_nodes[node.id] || node.selectable === false)) {
                         //double click node
                         if (node.onDblClick) {
                             node.onDblClick( e, pos, this );
@@ -6732,6 +6732,8 @@ LGraphNode.prototype.executeAction = function(action)
         } else if ((this.allow_interaction || (node && node.flags.allow_interaction)) && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
+                // Waterjade: highlight only the slot under the mouse now (set below), not the last one hovered
+                this.clearConnectingHighlight();
             }
 
             //remove mouseover flag
@@ -6873,8 +6875,10 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.node_dragged && !this.live_mode) {
                 this.nodes_moved = true;
 				//console.log("draggin!",this.selected_nodes);
-                for (var i in this.selected_nodes) {
-                    var n = this.selected_nodes[i];
+				// Waterjade: a non-selectable node is never in selected_nodes, so drag it alone
+				var dragged_nodes = this.node_dragged.selectable === false ? [this.node_dragged] : this.selected_nodes;
+                for (var i in dragged_nodes) {
+                    var n = dragged_nodes[i];
                     n.pos[0] += delta[0] / this.ds.scale;
                     n.pos[1] += delta[1] / this.ds.scale;
                     if (!n.is_selected) this.processNodeSelected(n, e); /*
@@ -7133,6 +7137,8 @@ LGraphNode.prototype.executeAction = function(action)
                 this.connecting_pos = null;
                 this.connecting_node = null;
                 this.connecting_slot = -1;
+                // Waterjade: else the next drag starts by highlighting the slot this one was released on
+                this.clearConnectingHighlight();
 
                 if (this.graph && this.graph.onAfterConnectionChange) {
                     this.graph.onAfterConnectionChange();
@@ -7758,7 +7764,15 @@ LGraphNode.prototype.executeAction = function(action)
         this.setDirty(true);
     };
 
+    /** Waterjade: forget the slot highlighted while dragging a link */
+    LGraphCanvas.prototype.clearConnectingHighlight = function() {
+        this._highlight_input = null;
+        this._highlight_input_slot = null;
+        this._highlight_output = null;
+    };
+
     LGraphCanvas.prototype.processNodeSelected = function(node, e) {
+        if (node.selectable === false) return; // Waterjade: clicking it leaves the current selection untouched
         this.selectNode(node, e && (e.shiftKey || e.ctrlKey || this.multi_select));
         if (this.onNodeSelected) {
             this.onNodeSelected(node);
@@ -7794,6 +7808,7 @@ LGraphNode.prototype.executeAction = function(action)
 		if (typeof nodes == "string") nodes = [nodes];
         for (var i in nodes) {
             var node = nodes[i];
+            if (node.selectable === false) continue; // Waterjade
             if (node.is_selected) {
                 this.deselectNode(node);
                 continue;
@@ -8955,9 +8970,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle =
                         slot.link != null
                             ? slot.color_on ||
+                              node.port_color ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_on
                             : slot.color_off ||
+                              node.port_color ||
                               this.default_connection_color_byTypeOff[slot_type] ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_off;
@@ -9061,9 +9078,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle =
                         slot.links && slot.links.length
                             ? slot.color_on ||
+                              node.port_color ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_on
                             : slot.color_off ||
+                              node.port_color ||
                               this.default_connection_color_byTypeOff[slot_type] ||
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_off;
@@ -9617,7 +9636,7 @@ LGraphNode.prototype.executeAction = function(action)
                     Math.PI * 2
                 );
             }
-            ctx.strokeStyle = LiteGraph.NODE_BOX_OUTLINE_COLOR;
+            ctx.strokeStyle = node.selected_outline_color || LiteGraph.NODE_BOX_OUTLINE_COLOR;
             ctx.stroke();
             ctx.strokeStyle = fgcolor;
             ctx.globalAlpha = 1;
@@ -29542,6 +29561,20 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
 //                   badge 8px left of the lock/pencil (or at the top-right
 //                   if neither is shown). Clicking it calls this function.
 //   - diagram_tooltip string shown when hovering it (none by default).
+//   - badges        array of extra title-bar badges, laid out right to left
+//                   after the built-in ones: { icon: Path2D, viewbox?: number
+//                   (default 16), fill_rule?: "nonzero"|"evenodd", color?:
+//                   glyph color, bgcolor?: badge background (eg. an error
+//                   state), tooltip?: string, onClick?: fn(node, gc) }.
+//   - color/bgcolor title bar / body background (core litegraph props), eg.
+//                   to render error or warning states.
+//   - port_color    color of every input/output port of the node (core;
+//                   a slot's own color_on/color_off still wins).
+//   - selectable    false → clicking the node doesn't select it, so no
+//                   selection border (core; default selectable). It can
+//                   still be dragged and receives onClick/onDblClick.
+//   - selected_outline_color  selection border color (core; default
+//                   LiteGraph.NODE_BOX_OUTLINE_COLOR, #22D3EE in the theme).
 //
 // Node types registered:
 //   - waterjade/node        generic, fully configurable; supports icon +
@@ -29691,6 +29724,12 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
             list.push({ path: diagramPath(), glyph: 16, vbW: 16, vbH: 16, rule: "nonzero",
                 tooltip: node.diagram_tooltip, onClick: node.onDiagramClick });
         }
+        var extra = node.badges || [];
+        for (var i = 0; i < extra.length; i++) {
+            var b = extra[i];
+            list.push({ path: b.icon, glyph: 16, vbW: b.viewbox || 16, rule: b.fill_rule,
+                color: b.color, bgcolor: b.bgcolor, tooltip: b.tooltip, onClick: b.onClick });
+        }
         return list;
     }
 
@@ -29706,8 +29745,8 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
     }
 
     function drawBadge(ctx, r, badge, hovered) {
-        ctx.fillStyle = hovered ? "#52525B" : "#3F3F46";
-        ctx.strokeStyle = "#52525B";
+        ctx.fillStyle = badge.bgcolor || (hovered ? "#52525B" : "#3F3F46");
+        ctx.strokeStyle = badge.bgcolor || "#52525B";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, [6]);
@@ -29717,7 +29756,7 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
         if (badge.path) {
             var glyphPad = (r.w - badge.glyph) / 2;
             drawSvgPath(ctx, badge.path, r.x + glyphPad, r.y + glyphPad, badge.glyph,
-                badge.vbW, ZINC_300, badge.vbH, badge.rule);
+                badge.vbW, badge.color || ZINC_300, badge.vbH, badge.rule);
         }
     }
 

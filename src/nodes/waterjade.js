@@ -19,6 +19,20 @@
 //                   badge 8px left of the lock/pencil (or at the top-right
 //                   if neither is shown). Clicking it calls this function.
 //   - diagram_tooltip string shown when hovering it (none by default).
+//   - badges        array of extra title-bar badges, laid out right to left
+//                   after the built-in ones: { icon: Path2D, viewbox?: number
+//                   (default 16), fill_rule?: "nonzero"|"evenodd", color?:
+//                   glyph color, bgcolor?: badge background (eg. an error
+//                   state), tooltip?: string, onClick?: fn(node, gc) }.
+//   - color/bgcolor title bar / body background (core litegraph props), eg.
+//                   to render error or warning states.
+//   - port_color    color of every input/output port of the node (core;
+//                   a slot's own color_on/color_off still wins).
+//   - selectable    false → clicking the node doesn't select it, so no
+//                   selection border (core; default selectable). It can
+//                   still be dragged and receives onClick/onDblClick.
+//   - selected_outline_color  selection border color (core; default
+//                   LiteGraph.NODE_BOX_OUTLINE_COLOR, #22D3EE in the theme).
 //
 // Node types registered:
 //   - waterjade/node        generic, fully configurable; supports icon +
@@ -168,6 +182,12 @@
             list.push({ path: diagramPath(), glyph: 16, vbW: 16, vbH: 16, rule: "nonzero",
                 tooltip: node.diagram_tooltip, onClick: node.onDiagramClick });
         }
+        var extra = node.badges || [];
+        for (var i = 0; i < extra.length; i++) {
+            var b = extra[i];
+            list.push({ path: b.icon, glyph: 16, vbW: b.viewbox || 16, rule: b.fill_rule,
+                color: b.color, bgcolor: b.bgcolor, tooltip: b.tooltip, onClick: b.onClick });
+        }
         return list;
     }
 
@@ -183,8 +203,8 @@
     }
 
     function drawBadge(ctx, r, badge, hovered) {
-        ctx.fillStyle = hovered ? "#52525B" : "#3F3F46";
-        ctx.strokeStyle = "#52525B";
+        ctx.fillStyle = badge.bgcolor || (hovered ? "#52525B" : "#3F3F46");
+        ctx.strokeStyle = badge.bgcolor || "#52525B";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, [6]);
@@ -194,7 +214,7 @@
         if (badge.path) {
             var glyphPad = (r.w - badge.glyph) / 2;
             drawSvgPath(ctx, badge.path, r.x + glyphPad, r.y + glyphPad, badge.glyph,
-                badge.vbW, ZINC_300, badge.vbH, badge.rule);
+                badge.vbW, badge.color || ZINC_300, badge.vbH, badge.rule);
         }
     }
 
