@@ -1289,6 +1289,27 @@ export declare class LGraphCanvas {
     selected_group_resizing: boolean;
     selected_nodes: Record<number, LGraphNode>;
     show_info: boolean;
+    /** draws an overview of the whole graph in the bottom-left corner, click or drag on it to move the view */
+    show_minimap: boolean;
+    minimap_width: number;
+    minimap_height: number;
+    /** distance from the canvas edges */
+    minimap_margin: number;
+    /** space between the minimap border and the graph content */
+    minimap_padding: number;
+    minimap_radius: number;
+    /** nodes smaller than this (in minimap pixels) are enlarged so they stay visible */
+    minimap_min_node_size: number;
+    minimap_render_links: boolean;
+    minimap_bg_color: string;
+    minimap_border_color: string;
+    minimap_node_color: string;
+    minimap_selected_node_color: string;
+    minimap_link_color: string;
+    minimap_viewport_color: string;
+    minimap_viewport_fill_color: string;
+    /** true while the user is dragging the view from the minimap */
+    readonly minimap_dragging: boolean;
     title_text_font: string;
     /** set to true to render title bar with gradients */
     use_gradients: boolean;
@@ -1388,6 +1409,18 @@ export declare class LGraphCanvas {
     drawFrontCanvas(): void;
     /** draws some useful stats in the corner of the canvas */
     renderInfo(ctx: CanvasRenderingContext2D, x: number, y: number): void;
+    /** returns the area [x,y,w,h] in canvas pixels where the minimap is drawn */
+    getMinimapRect(): Vector4;
+    /** returns true if the minimap is shown and the given position (in canvas pixels) is over it */
+    isOverMinimap(x: number, y: number): boolean;
+    /** returns the graph area [x,y,w,h] represented by the minimap: all the nodes plus the visible area */
+    computeMinimapBounds(): Vector4;
+    /** returns the transform from graph space to minimap canvas pixels: minimap = graph * scale + [x, y] */
+    computeMinimapTransform(): { scale: number; x: number; y: number };
+    /** moves the view so that the graph point under the given minimap position (in canvas pixels) is centered */
+    centerOnMinimapPosition(x: number, y: number): void;
+    /** draws the minimap in screen space */
+    drawMinimap(ctx: CanvasRenderingContext2D): void;
     /** draws the back canvas (the one containing the background and the connections) */
     drawBackCanvas(): void;
     /** draws the given node inside the canvas */

@@ -813,6 +813,13 @@
         portIdle: "#F08C00",
         portActive: "#FFAA33",
         portConnecting: "#FFAA33",
+        minimapBg: "rgba(24,24,27,0.85)",       // Zinc-900, translucent
+        minimapBorder: "#3F3F46",               // Zinc-700
+        minimapNode: "#71717A",                 // Zinc-500
+        minimapSelectedNode: "#22D3EE",
+        minimapLink: "rgba(255,255,255,0.35)",
+        minimapViewport: "#FFFFFF",
+        minimapViewportFill: "rgba(255,255,255,0.08)",
     },
 
     applyWaterjadeTheme: function (graphcanvas) {
@@ -880,6 +887,14 @@
 
         graphcanvas.node_title_color = palette.textPrimary;
         graphcanvas.default_link_color = palette.link;
+
+        graphcanvas.minimap_bg_color = palette.minimapBg;
+        graphcanvas.minimap_border_color = palette.minimapBorder;
+        graphcanvas.minimap_node_color = palette.minimapNode;
+        graphcanvas.minimap_selected_node_color = palette.minimapSelectedNode;
+        graphcanvas.minimap_link_color = palette.minimapLink;
+        graphcanvas.minimap_viewport_color = palette.minimapViewport;
+        graphcanvas.minimap_viewport_fill_color = palette.minimapViewportFill;
 
         graphcanvas.title_text_font =
             "500 13px 'Inter', 'Segoe UI', system-ui, sans-serif";
@@ -5553,6 +5568,25 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_only_selected = true;
         this.live_mode = false;
         this.show_info = true;
+
+        //minimap: overview of the whole graph drawn in the bottom-left corner, click or drag on it to move the view
+        this.show_minimap = false;
+        this.minimap_width = 200;
+        this.minimap_height = 140;
+        this.minimap_margin = 16; //distance from the canvas edges
+        this.minimap_padding = 8; //space between the minimap border and the graph content
+        this.minimap_radius = 6;
+        this.minimap_min_node_size = 2; //nodes smaller than this (in minimap pixels) are enlarged so they stay visible
+        this.minimap_render_links = true;
+        this.minimap_bg_color = "rgba(24,24,27,0.85)";
+        this.minimap_border_color = "#3F3F46";
+        this.minimap_node_color = "#71717A";
+        this.minimap_selected_node_color = "#22D3EE";
+        this.minimap_link_color = "rgba(255,255,255,0.35)";
+        this.minimap_viewport_color = "#FFFFFF";
+        this.minimap_viewport_fill_color = "rgba(255,255,255,0.08)";
+        this.minimap_dragging = false;
+
         this.allow_dragcanvas = true;
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
@@ -6190,6 +6224,15 @@ LGraphNode.prototype.executeAction = function(action)
 			return;
 		}
 
+        if (e.which == 1 && this.isOverMinimap(this.last_mouse_position[0], this.last_mouse_position[1])) {
+            //the minimap scale is frozen while dragging, otherwise it would change under the pointer as the view moves
+            this.minimap_dragging = true;
+            this._minimap_transform = this.computeMinimapTransform();
+            this.centerOnMinimapPosition(this.last_mouse_position[0], this.last_mouse_position[1]);
+            e.preventDefault();
+            return;
+        }
+
         var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes, 5 );
         var skip_dragging = false;
         var skip_action = false;
@@ -6676,8 +6719,14 @@ LGraphNode.prototype.executeAction = function(action)
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 
+        if (this.minimap_dragging) {
+            this.centerOnMinimapPosition(this.last_mouse_position[0], this.last_mouse_position[1]);
+            e.preventDefault();
+            return false;
+        }
+
         //console.log("pointerevents: processMouseMove "+e.pointerId+" "+e.isPrimary);
-        
+
 		if(this.block_click)
 		{
 			//console.log("pointerevents: processMouseMove block_click");
@@ -6941,6 +6990,15 @@ LGraphNode.prototype.executeAction = function(action)
 			LiteGraph.pointerListenerAdd(this.canvas,"move", this._mousemove_callback,true);
 			LiteGraph.pointerListenerRemove(document,"up", this._mouseup_callback,true);
 		}
+
+        if (this.minimap_dragging) {
+            this.minimap_dragging = false;
+            this._minimap_transform = null;
+            this.last_click_position = null;
+            this.dirty_canvas = true;
+            e.preventDefault();
+            return false;
+        }
 
         this.adjustMouseEvent(e);
         var now = LiteGraph.getTime();
@@ -7257,6 +7315,11 @@ LGraphNode.prototype.executeAction = function(action)
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 		if(!is_inside)
 			return;
+
+        if (this.isOverMinimap(this.last_mouse_position[0], this.last_mouse_position[1])) {
+            e.preventDefault();
+            return false;
+        }
 
         var scale = this.ds.scale;
 
@@ -8372,11 +8435,14 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.restore();
         }
 
-		//draws panel in the corner 
+		//draws panel in the corner
 		if (this._graph_stack && this._graph_stack.length) {
 			this.drawSubgraphPanel( ctx );
 		}
 
+        if (this.show_minimap) {
+            this.drawMinimap(ctx);
+        }
 
         if (this.onDrawOverlay) {
             this.onDrawOverlay(ctx);
@@ -8603,6 +8669,162 @@ LGraphNode.prototype.executeAction = function(action)
      * draws some useful stats in the corner of the canvas
      * @method renderInfo
      **/
+    /**
+     * returns the area [x,y,w,h] in canvas pixels where the minimap is drawn (bottom-left corner)
+     * @method getMinimapRect
+     **/
+    LGraphCanvas.prototype.getMinimapRect = function() {
+        var height = this.canvas ? this.canvas.height : 0;
+        return [
+            this.minimap_margin,
+            height - this.minimap_margin - this.minimap_height,
+            this.minimap_width,
+            this.minimap_height
+        ];
+    };
+
+    /**
+     * returns true if the minimap is shown and the given position (in canvas pixels) is over it
+     * @method isOverMinimap
+     **/
+    LGraphCanvas.prototype.isOverMinimap = function(x, y) {
+        if (!this.show_minimap || !this.graph) {
+            return false;
+        }
+        var rect = this.getMinimapRect();
+        return isInsideRectangle(x, y, rect[0], rect[1], rect[2], rect[3]);
+    };
+
+    /**
+     * returns the graph area [x,y,w,h] represented by the minimap: all the nodes plus the visible area
+     * @method computeMinimapBounds
+     **/
+    LGraphCanvas.prototype.computeMinimapBounds = function() {
+        var visible = this.ds.visible_area;
+        var left = visible[0];
+        var top = visible[1];
+        var right = visible[0] + visible[2];
+        var bottom = visible[1] + visible[3];
+        var nodes = this.graph ? this.graph._nodes : [];
+        var bounding = new Float32Array(4);
+        for (var i = 0; i < nodes.length; ++i) {
+            nodes[i].getBounding(bounding);
+            left = Math.min(left, bounding[0]);
+            top = Math.min(top, bounding[1]);
+            right = Math.max(right, bounding[0] + bounding[2]);
+            bottom = Math.max(bottom, bounding[1] + bounding[3]);
+        }
+        return [left, top, Math.max(right - left, 1), Math.max(bottom - top, 1)];
+    };
+
+    /**
+     * returns the transform from graph space to minimap canvas pixels: minimap = graph * scale + [x, y]
+     * @method computeMinimapTransform
+     **/
+    LGraphCanvas.prototype.computeMinimapTransform = function() {
+        var rect = this.getMinimapRect();
+        var bounds = this.computeMinimapBounds();
+        var padding = this.minimap_padding;
+        var available_width = rect[2] - padding * 2;
+        var available_height = rect[3] - padding * 2;
+        var scale = Math.min(available_width / bounds[2], available_height / bounds[3]);
+        return {
+            scale: scale,
+            x: rect[0] + padding + (available_width - bounds[2] * scale) * 0.5 - bounds[0] * scale,
+            y: rect[1] + padding + (available_height - bounds[3] * scale) * 0.5 - bounds[1] * scale
+        };
+    };
+
+    /**
+     * moves the view so that the graph point under the given minimap position (in canvas pixels) is at the center of the canvas
+     * @method centerOnMinimapPosition
+     **/
+    LGraphCanvas.prototype.centerOnMinimapPosition = function(x, y) {
+        var transform = this._minimap_transform || this.computeMinimapTransform();
+        var graph_x = (x - transform.x) / transform.scale;
+        var graph_y = (y - transform.y) / transform.scale;
+        this.ds.offset[0] = this.canvas.width / (2 * this.ds.scale) - graph_x;
+        this.ds.offset[1] = this.canvas.height / (2 * this.ds.scale) - graph_y;
+        this.setDirty(true, true);
+    };
+
+    /**
+     * draws the minimap in screen space: nodes as plain boxes, links as straight lines and the current view as a rectangle
+     * @method drawMinimap
+     **/
+    LGraphCanvas.prototype.drawMinimap = function(ctx) {
+        if (!this.graph) {
+            return;
+        }
+        var rect = this.getMinimapRect();
+        var transform = this._minimap_transform || this.computeMinimapTransform();
+        var scale = transform.scale;
+        var nodes = this.graph._nodes;
+        var bounding = new Float32Array(4);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(rect[0], rect[1], rect[2], rect[3], this.minimap_radius);
+        ctx.fillStyle = this.minimap_bg_color;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = this.minimap_border_color;
+        ctx.stroke();
+        ctx.clip();
+
+        if (this.minimap_render_links && this.graph.links) {
+            ctx.beginPath();
+            for (var link_id in this.graph.links) {
+                var link = this.graph.links[link_id];
+                if (!link) {
+                    continue;
+                }
+                var origin = this.graph.getNodeById(link.origin_id);
+                var target = this.graph.getNodeById(link.target_id);
+                if (!origin || !target) {
+                    continue;
+                }
+                origin.getBounding(bounding);
+                ctx.moveTo(
+                    (bounding[0] + bounding[2]) * scale + transform.x,
+                    (bounding[1] + bounding[3] * 0.5) * scale + transform.y
+                );
+                target.getBounding(bounding);
+                ctx.lineTo(
+                    bounding[0] * scale + transform.x,
+                    (bounding[1] + bounding[3] * 0.5) * scale + transform.y
+                );
+            }
+            ctx.strokeStyle = this.minimap_link_color;
+            ctx.stroke();
+        }
+
+        var min_size = this.minimap_min_node_size;
+        for (var i = 0; i < nodes.length; ++i) {
+            var node = nodes[i];
+            node.getBounding(bounding);
+            ctx.fillStyle = this.selected_nodes[node.id] ? this.minimap_selected_node_color : this.minimap_node_color;
+            ctx.fillRect(
+                bounding[0] * scale + transform.x,
+                bounding[1] * scale + transform.y,
+                Math.max(bounding[2] * scale, min_size),
+                Math.max(bounding[3] * scale, min_size)
+            );
+        }
+
+        var visible = this.ds.visible_area;
+        var view_x = visible[0] * scale + transform.x;
+        var view_y = visible[1] * scale + transform.y;
+        var view_width = visible[2] * scale;
+        var view_height = visible[3] * scale;
+        ctx.fillStyle = this.minimap_viewport_fill_color;
+        ctx.fillRect(view_x, view_y, view_width, view_height);
+        ctx.strokeStyle = this.minimap_viewport_color;
+        ctx.strokeRect(view_x + 0.5, view_y + 0.5, view_width - 1, view_height - 1);
+
+        ctx.restore();
+    };
+
     LGraphCanvas.prototype.renderInfo = function(ctx, x, y) {
         x = x || 10;
         y = y || this.canvas.height - 80;

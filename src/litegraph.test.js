@@ -224,3 +224,55 @@ describe("unregister node types", () => {
         expect(lg.LiteGraph.registered_node_types["blank/node"]).toBeFalsy();
     })
 });
+
+describe("minimap", () => {
+    let lg;
+    let graphCanvas;
+
+    beforeEach(() => {
+        jest.resetModules();
+        lg = require("./litegraph");
+        graphCanvas = Object.assign(Object.create(lg.LGraphCanvas.prototype), {
+            canvas: { width: 800, height: 600 },
+            show_minimap: true,
+            minimap_width: 200,
+            minimap_height: 140,
+            minimap_margin: 16,
+            minimap_padding: 8,
+            graph: {
+                _nodes: [
+                    {
+                        getBounding: (out) => {
+                            out[0] = 1000;
+                            out[1] = 1000;
+                            out[2] = 200;
+                            out[3] = 100;
+                            return out;
+                        },
+                    },
+                ],
+            },
+            ds: { visible_area: [0, 0, 800, 600], offset: [0, 0], scale: 1 },
+            setDirty: jest.fn(),
+        });
+    });
+
+    test("is drawn in the bottom-left corner", () => {
+        expect(graphCanvas.getMinimapRect()).toEqual([16, 444, 200, 140]);
+        expect(graphCanvas.isOverMinimap(20, 500)).toBe(true);
+        expect(graphCanvas.isOverMinimap(300, 500)).toBe(false);
+        graphCanvas.show_minimap = false;
+        expect(graphCanvas.isOverMinimap(20, 500)).toBe(false);
+    });
+
+    test("covers all the nodes and the visible area", () => {
+        expect(graphCanvas.computeMinimapBounds()).toEqual([0, 0, 1200, 1100]);
+    });
+
+    test("clicking its center centers the view on the graph bounds", () => {
+        graphCanvas.centerOnMinimapPosition(116, 514);
+        expect(graphCanvas.ds.offset[0]).toBeCloseTo(-200);
+        expect(graphCanvas.ds.offset[1]).toBeCloseTo(-250);
+        expect(graphCanvas.setDirty).toHaveBeenCalledWith(true, true);
+    });
+});
