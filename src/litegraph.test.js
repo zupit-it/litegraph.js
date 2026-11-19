@@ -224,3 +224,66 @@ describe("unregister node types", () => {
         expect(lg.LiteGraph.registered_node_types["blank/node"]).toBeFalsy();
     })
 });
+
+describe("selectable", () => {
+    let lg;
+
+    beforeEach(() => {
+        jest.resetModules();
+        lg = require("./litegraph");
+    });
+
+    test("non-selectable nodes are skipped by every selection path", () => {
+        const graph = new lg.LGraph();
+        const canvas = new lg.LGraphCanvas(null, graph, { skip_render: true });
+        const a = new lg.LGraphNode("a");
+        const b = new lg.LGraphNode("b");
+        graph.add(a);
+        graph.add(b);
+        b.selectable = false;
+        canvas.onNodeSelected = jest.fn();
+
+        canvas.processNodeSelected(a);
+        canvas.processNodeSelected(b);
+        expect(a.is_selected).toBe(true);
+        expect(b.is_selected).toBeFalsy();
+        expect(canvas.onNodeSelected).toHaveBeenCalledTimes(1);
+
+        canvas.selectNodes(); // select all
+        expect(Object.keys(canvas.selected_nodes)).toEqual([String(a.id)]);
+    });
+});
+
+describe("connecting highlight", () => {
+    let lg;
+
+    beforeEach(() => {
+        jest.resetModules();
+        lg = require("./litegraph");
+    });
+
+    test("is cleared when a dragged link is released", () => {
+        const graph = new lg.LGraph();
+        const canvas = new lg.LGraphCanvas(null, graph, { skip_render: true, skip_events: true });
+        canvas.getCanvasWindow = () => ({ document: {} }); // no DOM in the tests
+        canvas.adjustMouseEvent = () => {};
+        canvas.saveState = () => {}; // calls graphToJson, which the library does not define
+        const node = new lg.LGraphNode("a");
+        node.addOutput("out", "number");
+        graph.add(node);
+        canvas.connecting_node = node;
+        canvas.connecting_output = node.outputs[0];
+        canvas.connecting_slot = 0;
+        canvas._highlight_input = [10, 10];
+        canvas._highlight_input_slot = {};
+        canvas._highlight_output = [20, 20];
+
+        canvas.processMouseUp({ canvasX: 500, canvasY: 500, clientX: 500, clientY: 500, which: 1, button: 0, type: "pointerup",
+            isPrimary: true, pointerId: 1, preventDefault: () => {}, stopPropagation: () => {} });
+
+        expect(canvas.connecting_node).toBeNull();
+        expect(canvas._highlight_input).toBeNull();
+        expect(canvas._highlight_input_slot).toBeNull();
+        expect(canvas._highlight_output).toBeNull();
+    });
+});

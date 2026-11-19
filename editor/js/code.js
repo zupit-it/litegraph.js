@@ -199,6 +199,19 @@ addDemo("Waterjade", function(){
 
 	hruIn.connect(0, internal, 0);
 	internal.connect(0, hruOut, 0);
+
+	// --- error state on DAM2: background, ports, extra badge; HRU nodes not selectable ---
+	m1.color = m1.bgcolor = "#450A0A";
+	m1.port_color = "#EF4444";
+	m1.badges = [{
+		icon: new Path2D("M8 1L15 14H1Z M7.25 6H8.75V10H7.25Z M7.25 11H8.75V12.5H7.25Z"),
+		fill_rule: "evenodd",
+		color: "#EF4444",
+		tooltip: "Missing parameters",
+		onClick: function(node) { console.log("[waterjade] warning clicked:", node.title); }
+	}];
+	hruIn.selectable = false;
+	hruOut.selectable = false;
 });
 
 addDemo("autobackup", function(){
