@@ -337,35 +337,20 @@
             name,
             object
         ) {
-            var ctor_code = "";
-            if(object.inputs)
-            for(var i=0; i < object.inputs.length; ++i)
-            {
-                var _name = object.inputs[i][0];
-                var _type = object.inputs[i][1];
-                if(_type && _type.constructor === String)
-                    _type = '"'+_type+'"';
-                ctor_code += "this.addInput('"+_name+"',"+_type+");\n";
-            }
-            if(object.outputs)
-            for(var i=0; i < object.outputs.length; ++i)
-            {
-                var _name = object.outputs[i][0];
-                var _type = object.outputs[i][1];
-                if(_type && _type.constructor === String)
-                    _type = '"'+_type+'"';
-                ctor_code += "this.addOutput('"+_name+"',"+_type+");\n";
-            }
-            if(object.properties)
-            for(var i in object.properties)
-            {
-                var prop = object.properties[i];
-                if(prop && prop.constructor === String)
-                    prop = '"'+prop+'"';
-                ctor_code += "this.addProperty('"+i+"',"+prop+");\n";
-            }
-            ctor_code += "if(this.onCreate)this.onCreate()";
-            var classobj = Function(ctor_code);
+            var inputs = object.inputs || [];
+            var outputs = object.outputs || [];
+            var properties = object.properties || {};
+            // a closure, not Function(code): works under a Content-Security-Policy without 'unsafe-eval'
+            var classobj = function() {
+                for (var i = 0; i < inputs.length; ++i)
+                    this.addInput(inputs[i][0], inputs[i][1]);
+                for (var i = 0; i < outputs.length; ++i)
+                    this.addOutput(outputs[i][0], outputs[i][1]);
+                for (var i in properties)
+                    this.addProperty(i, properties[i]);
+                if (this.onCreate)
+                    this.onCreate();
+            };
             for(var i in object)
                 if(i!="inputs" && i!="outputs" && i!="properties")
                     classobj.prototype[i] = object[i];
@@ -393,38 +378,27 @@
             properties
         ) {
             var params = Array(func.length);
-            var code = "";
+            var input_specs = [];
             if(param_types !== null) //null means no inputs
             {
                 var names = LiteGraph.getParameterNames(func);
                 for (var i = 0; i < names.length; ++i) {
                     var type = 0;
-                    if(param_types)
-                    {
-                        //type = param_types[i] != null ? "'" + param_types[i] + "'" : "0";
-                        if( param_types[i] != null && param_types[i].constructor === String )
-                            type = "'" + param_types[i] + "'" ;
-                        else if( param_types[i] != null )
-                            type = param_types[i];
-                    } 
-                    code +=
-                        "this.addInput('" +
-                        names[i] +
-                        "'," +
-                        type +
-                        ");\n";
+                    if (param_types && param_types[i] != null)
+                        type = param_types[i];
+                    input_specs.push([names[i], type]);
                 }
             }
-            if(return_type !== null) //null means no output
-            code +=
-                "this.addOutput('out'," +
-                (return_type != null ? (return_type.constructor === String ? "'" + return_type + "'" : return_type) : 0) +
-                ");\n";
-            if (properties) {
-                code +=
-                    "this.properties = " + JSON.stringify(properties) + ";\n";
-            }
-            var classobj = Function(code);
+            var output_type = return_type != null ? return_type : 0;
+            // a closure, not Function(code): works under a Content-Security-Policy without 'unsafe-eval'
+            var classobj = function() {
+                for (var i = 0; i < input_specs.length; ++i)
+                    this.addInput(input_specs[i][0], input_specs[i][1]);
+                if (return_type !== null) //null means no output
+                    this.addOutput("out", output_type);
+                if (properties)
+                    this.properties = JSON.parse(JSON.stringify(properties));
+            };
             classobj.title = name.split("/").pop();
             classobj.desc = "Generated from " + func.name;
             classobj.prototype.onExecute = function onExecute() {
